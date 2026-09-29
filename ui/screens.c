@@ -101,9 +101,7 @@ void create_screen_main() {
             lv_obj_set_pos(obj, 11, 167);
             lv_obj_set_size(obj, 82, 50);
             lv_obj_add_event_cb(obj, action_go_to_settings_page, LV_EVENT_RELEASED, (void *)0);
-            lv_obj_set_style_bg_color(obj, lv_color_hex(0x7d7d7d), LV_PART_MAIN | LV_STATE_DEFAULT);
-            lv_obj_set_style_bg_grad_color(obj, lv_color_hex(0xfff9f9), LV_PART_MAIN | LV_STATE_DEFAULT);
-            lv_obj_set_style_bg_grad_dir(obj, LV_GRAD_DIR_VER, LV_PART_MAIN | LV_STATE_DEFAULT);
+            lv_obj_set_style_bg_color(obj, lv_color_hex(0x0bf7f7), LV_PART_MAIN | LV_STATE_DEFAULT);
             {
                 lv_obj_t *parent_obj = obj;
                 {
@@ -162,6 +160,25 @@ void create_screen_main() {
             lv_obj_set_style_text_color(obj, lv_color_hex(0xffffff), LV_PART_MAIN | LV_STATE_DEFAULT);
             lv_label_set_text_static(obj, "CURRENT:");
         }
+        {
+            // msg_box
+            lv_obj_t *obj = lv_msgbox_create(parent_obj, "", "", 0, false);
+            objects.msg_box = obj;
+            lv_obj_set_pos(obj, 63, 72);
+            lv_obj_set_size(obj, 180, 100);
+            lv_obj_set_style_align(obj, LV_ALIGN_DEFAULT, LV_PART_MAIN | LV_STATE_DEFAULT);
+            {
+                lv_obj_t *parent_obj = obj;
+                {
+                    // msg_box_text
+                    lv_obj_t *obj = lv_label_create(parent_obj);
+                    objects.msg_box_text = obj;
+                    lv_obj_set_pos(obj, 314, 120);
+                    lv_obj_set_size(obj, LV_SIZE_CONTENT, LV_SIZE_CONTENT);
+                    lv_label_set_text(obj, "Text");
+                }
+            }
+        }
     }
     
     tick_screen_main();
@@ -185,9 +202,7 @@ void create_screen_settings_page() {
             lv_obj_set_pos(obj, 257, 195);
             lv_obj_set_size(obj, 52, 34);
             lv_obj_add_event_cb(obj, action_exit_to_main_page, LV_EVENT_RELEASED, (void *)0);
-            lv_obj_set_style_bg_color(obj, lv_color_hex(0x7d7d7d), LV_PART_MAIN | LV_STATE_DEFAULT);
-            lv_obj_set_style_bg_grad_dir(obj, LV_GRAD_DIR_VER, LV_PART_MAIN | LV_STATE_DEFAULT);
-            lv_obj_set_style_bg_grad_color(obj, lv_color_hex(0xffffff), LV_PART_MAIN | LV_STATE_DEFAULT);
+            lv_obj_set_style_bg_color(obj, lv_color_hex(0xffffff), LV_PART_MAIN | LV_STATE_DEFAULT);
             {
                 lv_obj_t *parent_obj = obj;
                 {
@@ -209,9 +224,7 @@ void create_screen_settings_page() {
             lv_obj_set_pos(obj, 8, 49);
             lv_obj_set_size(obj, 110, 42);
             lv_obj_add_event_cb(obj, action_go_to_buzzer_settings, LV_EVENT_RELEASED, (void *)0);
-            lv_obj_set_style_bg_color(obj, lv_color_hex(0x7d7d7d), LV_PART_MAIN | LV_STATE_DEFAULT);
-            lv_obj_set_style_bg_grad_dir(obj, LV_GRAD_DIR_VER, LV_PART_MAIN | LV_STATE_DEFAULT);
-            lv_obj_set_style_bg_grad_color(obj, lv_color_hex(0xffffff), LV_PART_MAIN | LV_STATE_DEFAULT);
+            lv_obj_set_style_bg_color(obj, lv_color_hex(0x0bf7f7), LV_PART_MAIN | LV_STATE_DEFAULT);
             {
                 lv_obj_t *parent_obj = obj;
                 {
@@ -233,9 +246,7 @@ void create_screen_settings_page() {
             lv_obj_set_pos(obj, 8, 109);
             lv_obj_set_size(obj, 110, 41);
             lv_obj_add_event_cb(obj, action_go_to_touch_calibration, LV_EVENT_RELEASED, (void *)0);
-            lv_obj_set_style_bg_color(obj, lv_color_hex(0x7d7d7d), LV_PART_MAIN | LV_STATE_DEFAULT);
-            lv_obj_set_style_bg_grad_dir(obj, LV_GRAD_DIR_VER, LV_PART_MAIN | LV_STATE_DEFAULT);
-            lv_obj_set_style_bg_grad_color(obj, lv_color_hex(0xffffff), LV_PART_MAIN | LV_STATE_DEFAULT);
+            lv_obj_set_style_bg_color(obj, lv_color_hex(0x0bf7f7), LV_PART_MAIN | LV_STATE_DEFAULT);
             {
                 lv_obj_t *parent_obj = obj;
                 {
@@ -257,9 +268,7 @@ void create_screen_settings_page() {
             lv_obj_set_pos(obj, 9, 167);
             lv_obj_set_size(obj, 110, 43);
             lv_obj_add_event_cb(obj, action_go_to_v_c_range_settings, LV_EVENT_RELEASED, (void *)0);
-            lv_obj_set_style_bg_color(obj, lv_color_hex(0x7d7d7d), LV_PART_MAIN | LV_STATE_DEFAULT);
-            lv_obj_set_style_bg_grad_dir(obj, LV_GRAD_DIR_VER, LV_PART_MAIN | LV_STATE_DEFAULT);
-            lv_obj_set_style_bg_grad_color(obj, lv_color_hex(0xffffff), LV_PART_MAIN | LV_STATE_DEFAULT);
+            lv_obj_set_style_bg_color(obj, lv_color_hex(0x0bf7f7), LV_PART_MAIN | LV_STATE_DEFAULT);
             {
                 lv_obj_t *parent_obj = obj;
                 {
@@ -324,9 +333,7 @@ void create_screen_buzzer_settings() {
             lv_obj_set_pos(obj, 16, 189);
             lv_obj_set_size(obj, 78, 41);
             lv_obj_add_event_cb(obj, action_go_from_buzzer_settings_page_to_settings_page, LV_EVENT_RELEASED, (void *)0);
-            lv_obj_set_style_bg_color(obj, lv_color_hex(0x7d7d7d), LV_PART_MAIN | LV_STATE_DEFAULT);
-            lv_obj_set_style_bg_grad_color(obj, lv_color_hex(0xffffff), LV_PART_MAIN | LV_STATE_DEFAULT);
-            lv_obj_set_style_bg_grad_dir(obj, LV_GRAD_DIR_VER, LV_PART_MAIN | LV_STATE_DEFAULT);
+            lv_obj_set_style_bg_color(obj, lv_color_hex(0xffffff), LV_PART_MAIN | LV_STATE_DEFAULT);
             {
                 lv_obj_t *parent_obj = obj;
                 {
@@ -494,9 +501,7 @@ void create_screen_v_c_range_settings() {
             lv_obj_set_pos(obj, 254, 196);
             lv_obj_set_size(obj, 57, 34);
             lv_obj_add_event_cb(obj, action_exit_from_v_c_menu_to_settings, LV_EVENT_RELEASED, (void *)0);
-            lv_obj_set_style_bg_color(obj, lv_color_hex(0x7d7d7d), LV_PART_MAIN | LV_STATE_DEFAULT);
-            lv_obj_set_style_bg_grad_color(obj, lv_color_hex(0xfcfcfc), LV_PART_MAIN | LV_STATE_DEFAULT);
-            lv_obj_set_style_bg_grad_dir(obj, LV_GRAD_DIR_VER, LV_PART_MAIN | LV_STATE_DEFAULT);
+            lv_obj_set_style_bg_color(obj, lv_color_hex(0xffffff), LV_PART_MAIN | LV_STATE_DEFAULT);
             {
                 lv_obj_t *parent_obj = obj;
                 {

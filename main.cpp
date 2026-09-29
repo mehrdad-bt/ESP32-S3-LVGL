@@ -42,6 +42,18 @@ extern "C"
 #define TRACE_INTERVAL_MS   2000
 
 // ==================================================
+// UART Debug Configuration
+// ==================================================
+
+// UART device is connected to Serial1.
+// Change these two GPIO numbers to the actual RX/TX pins
+// of your ESP32-S3 board if they are different.
+#define UART_RX_PIN           44
+#define UART_TX_PIN           43
+#define UART_BAUDRATE         115200
+#define UART_DEBUG_INTERVAL_MS 1000
+
+// ==================================================
 // RTC Debug Marker
 // ==================================================
 
@@ -382,6 +394,66 @@ static void lvgl_touch_init(void)
 }
 
 // ==================================================
+// UART RX Debug Monitor
+// ==================================================
+
+static void debug_uart_rx(void)
+{
+    static uint32_t last_debug_time = 0;
+
+    uint32_t now =
+        millis();
+
+    int available =
+        Serial1.available();
+
+    // --------------------------------------------------
+    // A byte is waiting in Serial1 RX buffer.
+    // peek() does NOT consume the byte, so uart_receive()
+    // inside tasks_run() can still process it normally.
+    // --------------------------------------------------
+
+    if (available > 0)
+    {
+        int first_byte =
+            Serial1.peek();
+
+        Serial.printf(
+            "[UART DEBUG] RX DATA available=%d first=0x%02X",
+            available,
+            first_byte >= 0
+                ? (unsigned int)(first_byte & 0xFF)
+                : 0U
+        );
+
+        if (
+            first_byte >= 32 &&
+            first_byte <= 126
+        )
+        {
+            Serial.printf(
+                " ('%c')",
+                (char)first_byte
+            );
+        }
+
+        Serial.println();
+    }
+    else if (
+        now - last_debug_time >=
+        UART_DEBUG_INTERVAL_MS
+    )
+    {
+        last_debug_time =
+            now;
+
+        Serial.println(
+            "[UART DEBUG] RX buffer empty"
+        );
+    }
+}
+
+// ==================================================
 // Setup
 // ==================================================
 
@@ -389,6 +461,30 @@ void setup(void)
 {
     Serial.begin(
         115200
+    );
+
+    // --------------------------------------------------
+    // UART1
+    // --------------------------------------------------
+    // Serial is kept for the USB/serial monitor.
+    // Serial1 is the external UART connected to the device.
+
+    Serial1.begin(
+        UART_BAUDRATE,
+        SERIAL_8N1,
+        UART_RX_PIN,
+        UART_TX_PIN
+    );
+
+    Serial.println(
+        "[UART DEBUG] Serial1 initialized"
+    );
+
+    Serial.printf(
+        "[UART DEBUG] RX=GPIO%d TX=GPIO%d BAUD=%d\n",
+        UART_RX_PIN,
+        UART_TX_PIN,
+        UART_BAUDRATE
     );
 
     delay(200);
@@ -675,6 +771,9 @@ void loop(void)
         PHASE_BEFORE_TASKS;
 
     watchdog_feed();
+
+    // Check Serial1 RX before tasks_run() consumes the data.
+    debug_uart_rx();
 
     tasks_run();
 

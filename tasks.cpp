@@ -13,6 +13,7 @@ extern "C"
 extern lv_obj_t *tick_value_change_obj;
 
 #include "tasks.h"
+#include "system_error.h"
 #include "uart.h"
 #include "screen_manager.h"
 #include "ui/vars.h"
@@ -91,19 +92,8 @@ extern lv_obj_t *tick_value_change_obj;
 #define CURRENT_LIMIT_MIN 0.0f
 #define CURRENT_LIMIT_MAX 3.0f
 
-// ==================================================
-// Error Types
-// ==================================================
-
-enum ErrorType
-{
-    ERROR_NONE = 0,
-    ERROR_CONNECTION,
-    ERROR_VOLTAGE_LOW,
-    ERROR_VOLTAGE_HIGH,
-    ERROR_CURRENT_LOW,
-    ERROR_CURRENT_HIGH
-};
+// ErrorType is declared in system_error.h so the MainPage module
+// can read the current error without exposing SystemState.
 
 // ==================================================
 // System State
@@ -2105,6 +2095,15 @@ static ErrorType get_error_type(void)
     }
 
     return ERROR_NONE;
+}
+
+// ==================================================
+// Public Error State
+// ==================================================
+
+ErrorType tasks_get_error_type(void)
+{
+    return get_error_type();
 }
 
 // ==================================================

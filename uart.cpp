@@ -5,10 +5,23 @@
 #include <string.h>
 
 // ==================================================
+// UART Configuration
+// ==================================================
+
+// !!! شماره GPIO واقعی RX بردت را اینجا قرار بده !!!
+#define UART_RX_PIN        44
+
+// اگر TX لازم نداری، می‌توانی -1 بگذاری.
+// فعلاً برای UART کامل روی GPIO43 قرار داده شده.
+#define UART_TX_PIN        43
+
+#define UART_BAUDRATE      115200
+
+// ==================================================
 // UART Buffer Configuration
 // ==================================================
 
-#define UART_BUFFER_SIZE       128
+#define UART_BUFFER_SIZE        128
 #define UART_MAX_BYTES_PER_CALL 32
 
 static char uart_buffer[
@@ -51,8 +64,37 @@ extern "C"
 
 void serial_init(void)
 {
+    /*
+     * Serial:
+     * فقط برای Debug و Serial Monitor
+     */
     Serial.begin(
         115200
+    );
+
+    /*
+     * Serial1:
+     * UART واقعی دستگاه
+     *
+     * RX = GPIO44
+     * TX = GPIO43
+     */
+    Serial1.begin(
+        UART_BAUDRATE,
+        SERIAL_8N1,
+        UART_RX_PIN,
+        UART_TX_PIN
+    );
+
+    Serial.println(
+        "[UART] Serial1 initialized"
+    );
+
+    Serial.printf(
+        "[UART] RX GPIO=%d TX GPIO=%d BAUD=%d\n",
+        UART_RX_PIN,
+        UART_TX_PIN,
+        UART_BAUDRATE
     );
 }
 
@@ -66,28 +108,35 @@ void uart_receive(void)
         0;
 
     /*
-     * مهم:
-     *
-     * قبلاً while (Serial.available()) بدون محدودیت بود.
-     *
-     * اگر ورودی UART دائماً داده داشته باشد،
-     * این حلقه می‌تواند مدت زیادی ادامه پیدا کند
-     * و tasks_run() فرصت برگشت به loop() را پیدا نکند.
-     *
-     * در هر بار اجرای این تابع حداکثر
-     * UART_MAX_BYTES_PER_CALL بایت پردازش می‌کنیم.
+     * در هر بار اجرا حداکثر
+     * UART_MAX_BYTES_PER_CALL
+     * بایت پردازش می‌کنیم.
      */
 
     while (
-        Serial.available() &&
-        processed_bytes <
-        UART_MAX_BYTES_PER_CALL
+        Serial1.available() &&
+        processed_bytes < UART_MAX_BYTES_PER_CALL
     )
     {
         char c =
-            Serial.read();
+            (char)Serial1.read();
 
         processed_bytes++;
+
+        // --------------------------------------------------
+        // Debug raw byte
+        // --------------------------------------------------
+
+        Serial.printf(
+            "[UART_RX] 0x%02X '%c'\n",
+            (unsigned char)c,
+            (
+                c >= 32 &&
+                c <= 126
+            )
+            ? c
+            : '.'
+        );
 
         // --------------------------------------------------
         // End of message
@@ -106,6 +155,11 @@ void uart_receive(void)
                 uart_buffer[
                     uart_index
                 ] = '\0';
+
+                Serial.printf(
+                    "[UART] MESSAGE: %s\n",
+                    uart_buffer
+                );
 
                 // --------------------------------------------------
                 // Parse:
@@ -130,8 +184,7 @@ void uart_receive(void)
                     );
 
                 if (
-                    result ==
-                    2
+                    result == 2
                 )
                 {
                     uart_voltage =
@@ -142,6 +195,18 @@ void uart_receive(void)
 
                     uart_values_ready =
                         true;
+
+                    Serial.printf(
+                        "[UART] PARSED V=%.2f C=%.2f\n",
+                        uart_voltage,
+                        uart_current
+                    );
+                }
+                else
+                {
+                    Serial.println(
+                        "[UART] PARSE ERROR"
+                    );
                 }
 
                 // --------------------------------------------------
@@ -176,7 +241,7 @@ void uart_receive(void)
 
             /*
              * اگر چند newline پشت سر هم وجود داشته باشد،
-             * همین‌جا پیام خالی نادیده گرفته می‌شود.
+             * پیام خالی نادیده گرفته می‌شود.
              */
         }
 
@@ -197,11 +262,13 @@ void uart_receive(void)
             }
             else
             {
+                Serial.println(
+                    "[UART] BUFFER OVERFLOW"
+                );
+
                 /*
-                 * Buffer full:
-                 *
-                 * پیام فعلی معتبر نیست.
-                 * تا newline بعدی جمع‌آوری را از نو شروع می‌کنیم.
+                 * تا newline بعدی
+                 * پیام فعلی را دور می‌ریزیم.
                  */
                 uart_index =
                     0;

@@ -5,12 +5,22 @@
 #include "font_persian_16.h"
 #include "font_persian_24.h"
 #include "screen_manager.h"
+#include "system_error.h"
 
 extern "C"
 {
 #include "ui/ui.h"
 #include "ui/screens.h"
 }
+
+static bool page_was_active = false;
+
+// ==================================================
+// Message Box State
+// ==================================================
+
+static ErrorType last_msg_box_error =
+    ERROR_NONE;
 
 // ==================================================
 // Configure Settings Button Text
@@ -53,8 +63,6 @@ static void configure_settings_button_text(void)
 // ==================================================
 // Configure Main Page Persian Labels
 // ==================================================
-
-static bool page_was_active = false;
 
 static void configure_main_page_labels(void)
 {
@@ -138,12 +146,217 @@ static void configure_main_page_labels(void)
 }
 
 // ==================================================
+// Configure / Hide Message Box
+// ==================================================
+
+static void configure_message_box(void)
+{
+    if (objects.msg_box == NULL)
+    {
+        return;
+    }
+
+    // Keep the EEZ-generated msg_box. We only configure its
+    // existing object from this page file, so screen.c remains
+    // completely untouched.
+    lv_obj_set_pos(
+        objects.msg_box,
+        63,
+        72
+    );
+
+    lv_obj_set_size(
+        objects.msg_box,
+        194,
+        96
+    );
+
+    lv_obj_set_style_bg_color(
+        objects.msg_box,
+        lv_color_hex(0x202020),
+        LV_PART_MAIN |
+        LV_STATE_DEFAULT
+    );
+
+    lv_obj_set_style_bg_opa(
+        objects.msg_box,
+        LV_OPA_COVER,
+        LV_PART_MAIN |
+        LV_STATE_DEFAULT
+    );
+
+    lv_obj_set_style_border_width(
+        objects.msg_box,
+        2,
+        LV_PART_MAIN |
+        LV_STATE_DEFAULT
+    );
+
+    lv_obj_set_style_border_color(
+        objects.msg_box,
+        lv_color_hex(0xFF0000),
+        LV_PART_MAIN |
+        LV_STATE_DEFAULT
+    );
+
+    lv_obj_set_style_radius(
+        objects.msg_box,
+        8,
+        LV_PART_MAIN |
+        LV_STATE_DEFAULT
+    );
+
+    if (objects.msg_box_text != NULL)
+    {
+        lv_obj_set_style_text_font(
+            objects.msg_box_text,
+            &font_persian_16,
+            LV_PART_MAIN |
+            LV_STATE_DEFAULT
+        );
+
+        lv_obj_set_style_text_color(
+            objects.msg_box_text,
+            lv_color_hex(0xFFFFFF),
+            LV_PART_MAIN |
+            LV_STATE_DEFAULT
+        );
+
+        lv_obj_set_style_base_dir(
+            objects.msg_box_text,
+            LV_BASE_DIR_RTL,
+            LV_PART_MAIN |
+            LV_STATE_DEFAULT
+        );
+
+        lv_label_set_long_mode(
+            objects.msg_box_text,
+            LV_LABEL_LONG_WRAP
+        );
+
+        lv_obj_set_width(
+            objects.msg_box_text,
+            150
+        );
+
+        lv_obj_align(
+            objects.msg_box_text,
+            LV_ALIGN_CENTER,
+            0,
+            0
+        );
+
+        lv_label_set_text(
+            objects.msg_box_text,
+            ""
+        );
+    }
+
+    // Hidden until a real error is detected.
+    lv_obj_add_flag(
+        objects.msg_box,
+        LV_OBJ_FLAG_HIDDEN
+    );
+
+    last_msg_box_error =
+        ERROR_NONE;
+}
+
+// ==================================================
+// Update Message Box
+// ==================================================
+
+static void update_message_box(void)
+{
+    if (!screen_manager_is(SCREEN_ID_MAIN))
+    {
+        return;
+    }
+
+    if (objects.msg_box == NULL)
+    {
+        return;
+    }
+
+    ErrorType error =
+        tasks_get_error_type();
+
+    // Only these three conditions are requested for the message box.
+    const char *message =
+        NULL;
+
+    switch (error)
+    {
+        case ERROR_VOLTAGE_LOW:
+            message =
+                "ولتاژ پایین است";
+            break;
+
+        case ERROR_VOLTAGE_HIGH:
+            message =
+                "ولتاژ بالا است";
+            break;
+
+        case ERROR_CONNECTION:
+            message =
+                "ارتباط UART قطع شده است";
+            break;
+
+        default:
+            message =
+                NULL;
+            break;
+    }
+
+    // Avoid touching LVGL every 20 ms when nothing changed.
+    if (error == last_msg_box_error)
+    {
+        return;
+    }
+
+    last_msg_box_error =
+        error;
+
+    if (message == NULL)
+    {
+        lv_obj_add_flag(
+            objects.msg_box,
+            LV_OBJ_FLAG_HIDDEN
+        );
+
+        return;
+    }
+
+    if (objects.msg_box_text != NULL)
+    {
+        lv_label_set_text(
+            objects.msg_box_text,
+            message
+        );
+    }
+
+    lv_obj_clear_flag(
+        objects.msg_box,
+        LV_OBJ_FLAG_HIDDEN
+    );
+}
+
+// ==================================================
 // Initialization
 // ==================================================
 
 void main_page_init(void)
 {
     page_was_active = false;
+    last_msg_box_error = ERROR_NONE;
+
+    if (objects.msg_box != NULL)
+    {
+        lv_obj_add_flag(
+            objects.msg_box,
+            LV_OBJ_FLAG_HIDDEN
+        );
+    }
 }
 
 // ==================================================
@@ -162,8 +375,9 @@ void main_page_update(void)
     {
         configure_settings_button_text();
         configure_main_page_labels();
+        configure_message_box();
         page_was_active = true;
     }
 
-    // Main data, LED and Error Box remain owned by tasks.cpp.
+    update_message_box();
 }
