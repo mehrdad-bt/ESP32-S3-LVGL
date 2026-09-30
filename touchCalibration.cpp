@@ -2,7 +2,7 @@
 
 #include <Arduino.h>
 #include <TFT_eSPI.h>
-
+#include "esp_task_wdt.h"
 
 // ==================================================
 // استفاده از TFT اصلی که در main.cpp ساخته شده
@@ -22,7 +22,6 @@ void touch_calibration_start(void)
 {
     uint16_t calData[5];
 
-
     // ==================================================
     // شروع Calibration
     // ==================================================
@@ -32,6 +31,20 @@ void touch_calibration_start(void)
     Serial.println("TOUCH CALIBRATION START");
     Serial.println("--------------------------------");
 
+    // ==================================================
+    // حذف loopTask از Watchdog
+    //
+    // tft.calibrateTouch() یک تابع blocking است و ممکن است
+    // بیشتر از 4 ثانیه طول بکشد.
+    // ==================================================
+
+    esp_err_t wdt_delete_result =
+        esp_task_wdt_delete(NULL);
+
+    Serial.printf(
+        "[CAL] esp_task_wdt_delete = %d\n",
+        (int)wdt_delete_result
+    );
 
     // ==================================================
     // پاک کردن صفحه
@@ -40,7 +53,6 @@ void touch_calibration_start(void)
     tft.fillScreen(
         TFT_BLACK
     );
-
 
     // ==================================================
     // متن راهنما
@@ -51,38 +63,33 @@ void touch_calibration_start(void)
         0
     );
 
-
     tft.setTextFont(
         2
     );
 
-
     tft.setTextSize(
         1
     );
-
 
     tft.setTextColor(
         TFT_WHITE,
         TFT_BLACK
     );
 
-
     tft.println(
         "Touch corners as indicated"
     );
-
 
     tft.setTextFont(
         1
     );
 
-
     tft.println();
-
 
     // ==================================================
     // شروع Calibration واقعی
+    //
+    // این تابع blocking است.
     // ==================================================
 
     tft.calibrateTouch(
@@ -91,7 +98,6 @@ void touch_calibration_start(void)
         TFT_BLACK,
         15
     );
-
 
     // ==================================================
     // Calibration کامل شد
@@ -102,16 +108,13 @@ void touch_calibration_start(void)
         "Touch calibration completed"
     );
 
-
     Serial.println(
         "New calibration values:"
     );
 
-
     Serial.print(
         "uint16_t calData[5] = { "
     );
-
 
     for (
         uint8_t i = 0;
@@ -123,7 +126,6 @@ void touch_calibration_start(void)
             calData[i]
         );
 
-
         if (
             i < 4
         )
@@ -134,16 +136,13 @@ void touch_calibration_start(void)
         }
     }
 
-
     Serial.println(
         " };"
     );
 
-
     Serial.println(
         "Applying new calibration..."
     );
-
 
     // ==================================================
     // اعمال Calibration جدید
@@ -153,7 +152,6 @@ void touch_calibration_start(void)
         calData
     );
 
-
     // ==================================================
     // نمایش نتیجه
     // ==================================================
@@ -162,46 +160,37 @@ void touch_calibration_start(void)
         TFT_BLACK
     );
 
-
     tft.setCursor(
         10,
         10
     );
 
-
     tft.setTextFont(
         2
     );
 
-
     tft.setTextSize(
         1
     );
-
 
     tft.setTextColor(
         TFT_GREEN,
         TFT_BLACK
     );
 
-
     tft.println(
         "Calibration complete!"
     );
-
 
     tft.setTextFont(
         1
     );
 
-
     tft.println();
-
 
     tft.println(
         "New calibration applied."
     );
-
 
     // ==================================================
     // کمی مکث برای نمایش نتیجه
@@ -211,6 +200,27 @@ void touch_calibration_start(void)
         1000
     );
 
+    // ==================================================
+    // برگرداندن loopTask به Watchdog
+    // ==================================================
+
+    esp_err_t wdt_add_result =
+        esp_task_wdt_add(NULL);
+
+    Serial.printf(
+        "[CAL] esp_task_wdt_add = %d\n",
+        (int)wdt_add_result
+    );
+
+    // ==================================================
+    // Feed اولیه بعد از بازگشت به Watchdog
+    // ==================================================
+
+    esp_task_wdt_reset();
+
+    // ==================================================
+    // پایان
+    // ==================================================
 
     Serial.println(
         "TOUCH CALIBRATION END"
