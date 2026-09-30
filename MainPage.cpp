@@ -13,7 +13,12 @@ extern "C"
 #include "ui/screens.h"
 }
 
-static bool page_was_active = false;
+// ==================================================
+// Page State
+// ==================================================
+
+static bool page_was_active =
+    false;
 
 // ==================================================
 // Message Box State
@@ -21,6 +26,13 @@ static bool page_was_active = false;
 
 static ErrorType last_msg_box_error =
     ERROR_NONE;
+
+// ==================================================
+// Message Box Colors
+// ==================================================
+
+#define MSGBOX_WARNING_COLOR  0xFFA500
+#define MSGBOX_ERROR_COLOR    0xFF0000
 
 // ==================================================
 // Configure Settings Button Text
@@ -146,7 +158,7 @@ static void configure_main_page_labels(void)
 }
 
 // ==================================================
-// Configure / Hide Message Box
+// Configure Message Box
 // ==================================================
 
 static void configure_message_box(void)
@@ -156,24 +168,29 @@ static void configure_message_box(void)
         return;
     }
 
-    // Keep the EEZ-generated msg_box. We only configure its
-    // existing object from this page file, so screen.c remains
-    // completely untouched.
+    // --------------------------------------------------
+    // Keep the EEZ-generated size and position
+    // --------------------------------------------------
+
     lv_obj_set_pos(
         objects.msg_box,
-        63,
-        72
+        43,
+        56
     );
 
     lv_obj_set_size(
         objects.msg_box,
-        194,
-        96
+        228,
+        128
     );
+
+    // --------------------------------------------------
+    // Default appearance
+    // --------------------------------------------------
 
     lv_obj_set_style_bg_color(
         objects.msg_box,
-        lv_color_hex(0x202020),
+        lv_color_hex(MSGBOX_ERROR_COLOR),
         LV_PART_MAIN |
         LV_STATE_DEFAULT
     );
@@ -187,14 +204,14 @@ static void configure_message_box(void)
 
     lv_obj_set_style_border_width(
         objects.msg_box,
-        2,
+        3,
         LV_PART_MAIN |
         LV_STATE_DEFAULT
     );
 
     lv_obj_set_style_border_color(
         objects.msg_box,
-        lv_color_hex(0xFF0000),
+        lv_color_hex(0xFFFFFF),
         LV_PART_MAIN |
         LV_STATE_DEFAULT
     );
@@ -206,11 +223,15 @@ static void configure_message_box(void)
         LV_STATE_DEFAULT
     );
 
+    // --------------------------------------------------
+    // Message Text
+    // --------------------------------------------------
+
     if (objects.msg_box_text != NULL)
     {
         lv_obj_set_style_text_font(
             objects.msg_box_text,
-            &font_persian_16,
+            &font_persian_24,
             LV_PART_MAIN |
             LV_STATE_DEFAULT
         );
@@ -234,9 +255,18 @@ static void configure_message_box(void)
             LV_LABEL_LONG_WRAP
         );
 
+        // --------------------------------------------------
+        // Text area
+        // --------------------------------------------------
+
         lv_obj_set_width(
             objects.msg_box_text,
-            150
+            200
+        );
+
+        lv_obj_set_height(
+            objects.msg_box_text,
+            90
         );
 
         lv_obj_align(
@@ -246,13 +276,23 @@ static void configure_message_box(void)
             0
         );
 
+        lv_obj_set_style_text_align(
+            objects.msg_box_text,
+            LV_TEXT_ALIGN_CENTER,
+            LV_PART_MAIN |
+            LV_STATE_DEFAULT
+        );
+
         lv_label_set_text(
             objects.msg_box_text,
             ""
         );
     }
 
-    // Hidden until a real error is detected.
+    // --------------------------------------------------
+    // Hidden initially
+    // --------------------------------------------------
+
     lv_obj_add_flag(
         objects.msg_box,
         LV_OBJ_FLAG_HIDDEN
@@ -281,34 +321,76 @@ static void update_message_box(void)
     ErrorType error =
         tasks_get_error_type();
 
-    // Only these three conditions are requested for the message box.
     const char *message =
         NULL;
 
+    uint32_t box_color =
+        MSGBOX_ERROR_COLOR;
+
+    // ==================================================
+    // Determine Message and Color
+    // ==================================================
+
     switch (error)
     {
-        case ERROR_VOLTAGE_LOW:
-            message =
-                "ولتاژ پایین است";
-            break;
-
-        case ERROR_VOLTAGE_HIGH:
-            message =
-                "ولتاژ بالا است";
-            break;
+        // --------------------------------------------------
+        // UART Connection Warning
+        // --------------------------------------------------
 
         case ERROR_CONNECTION:
+
             message =
-                "ارتباط UART قطع شده است";
+                "ارتباط UART\nقطع شده است";
+
+            box_color =
+                MSGBOX_WARNING_COLOR;
+
             break;
 
+        // --------------------------------------------------
+        // Low Voltage Error
+        // --------------------------------------------------
+
+        case ERROR_VOLTAGE_LOW:
+
+            message =
+                "ولتاژ پایین است";
+
+            box_color =
+                MSGBOX_ERROR_COLOR;
+
+            break;
+
+        // --------------------------------------------------
+        // High Voltage Error
+        // --------------------------------------------------
+
+        case ERROR_VOLTAGE_HIGH:
+
+            message =
+                "ولتاژ بالا است";
+
+            box_color =
+                MSGBOX_ERROR_COLOR;
+
+            break;
+
+        // --------------------------------------------------
+        // No Error
+        // --------------------------------------------------
+
         default:
+
             message =
                 NULL;
+
             break;
     }
 
-    // Avoid touching LVGL every 20 ms when nothing changed.
+    // ==================================================
+    // No State Change
+    // ==================================================
+
     if (error == last_msg_box_error)
     {
         return;
@@ -316,6 +398,10 @@ static void update_message_box(void)
 
     last_msg_box_error =
         error;
+
+    // ==================================================
+    // Hide Message Box
+    // ==================================================
 
     if (message == NULL)
     {
@@ -327,6 +413,10 @@ static void update_message_box(void)
         return;
     }
 
+    // ==================================================
+    // Set Message
+    // ==================================================
+
     if (objects.msg_box_text != NULL)
     {
         lv_label_set_text(
@@ -334,6 +424,28 @@ static void update_message_box(void)
             message
         );
     }
+
+    // ==================================================
+    // Set Box Color
+    // ==================================================
+
+    lv_obj_set_style_bg_color(
+        objects.msg_box,
+        lv_color_hex(box_color),
+        LV_PART_MAIN |
+        LV_STATE_DEFAULT
+    );
+
+    lv_obj_set_style_border_color(
+        objects.msg_box,
+        lv_color_hex(0xFFFFFF),
+        LV_PART_MAIN |
+        LV_STATE_DEFAULT
+    );
+
+    // ==================================================
+    // Show
+    // ==================================================
 
     lv_obj_clear_flag(
         objects.msg_box,
@@ -347,8 +459,11 @@ static void update_message_box(void)
 
 void main_page_init(void)
 {
-    page_was_active = false;
-    last_msg_box_error = ERROR_NONE;
+    page_was_active =
+        false;
+
+    last_msg_box_error =
+        ERROR_NONE;
 
     if (objects.msg_box != NULL)
     {
@@ -367,16 +482,22 @@ void main_page_update(void)
 {
     if (!screen_manager_is(SCREEN_ID_MAIN))
     {
-        page_was_active = false;
+        page_was_active =
+            false;
+
         return;
     }
 
     if (!page_was_active)
     {
         configure_settings_button_text();
+
         configure_main_page_labels();
+
         configure_message_box();
-        page_was_active = true;
+
+        page_was_active =
+            true;
     }
 
     update_message_box();
