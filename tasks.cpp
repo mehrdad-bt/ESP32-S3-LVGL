@@ -314,7 +314,7 @@ static void update_vc_range_gui(void);
 static void update_buzzer_gui(void);
 static void update_input_focus_gui(void);
 
-static void configure_led_simple_style(void);
+static void led_bisect_style(void);
 static void led_apply_color(uint32_t color);
 static void set_status_led(uint32_t color);
 static void set_status_led_blink(uint32_t color);
@@ -777,48 +777,18 @@ static void update_buzzer_gui(void)
     }
 }
 
-// ==================================================
-// LED Simple Style
-// ==================================================
+// // ==================================================
+// // LED Simple Style
+// // ==================================================
 
-static void configure_led_simple_style(void)
+static void led_bisect_style(void)
 {
-    if (objects.obj0 == NULL)
-        return;
+    if (objects.obj0 == NULL) return;
 
-    /* Circle */
-    lv_obj_set_style_radius(
-        objects.obj0,
-        LV_RADIUS_CIRCLE,
-        LV_PART_MAIN | LV_STATE_DEFAULT
-    );
-
-    /* Full background */
-    lv_obj_set_style_bg_opa(
-        objects.obj0,
-        LV_OPA_COVER,
-        LV_PART_MAIN | LV_STATE_DEFAULT
-    );
-
-    /* Disable shadow */
-    lv_obj_set_style_shadow_width(
-        objects.obj0,
-        0,
-        LV_PART_MAIN | LV_STATE_DEFAULT
-    );
-
-    lv_obj_set_style_shadow_spread(
-        objects.obj0,
-        0,
-        LV_PART_MAIN | LV_STATE_DEFAULT
-    );
-
-    /* No border */
-    lv_obj_set_style_border_width(
-        objects.obj0,
-        0,
-        LV_PART_MAIN | LV_STATE_DEFAULT
-    );
+   
+    lv_obj_set_style_shadow_width(objects.obj0, 0, LV_PART_MAIN | LV_STATE_DEFAULT);
+    lv_obj_set_style_shadow_spread(objects.obj0, 0, LV_PART_MAIN | LV_STATE_DEFAULT);
+    lv_obj_set_style_border_width(objects.obj0, 0, LV_PART_MAIN | LV_STATE_DEFAULT);
 }
 
 // ==================================================
@@ -2243,6 +2213,7 @@ static void update_led_state(void)
         return;
     }
 
+
     if (objects.obj0 == NULL)
     {
         return;
@@ -2466,8 +2437,8 @@ void tasks_init(void)
     // Initialize status LED
     // --------------------------------------------------
 
-    configure_led_simple_style();
-
+    
+    led_bisect_style();
     if (objects.obj0 != NULL)
     {
         led_apply_color(
