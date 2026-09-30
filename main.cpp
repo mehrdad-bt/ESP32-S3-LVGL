@@ -463,18 +463,6 @@ void setup(void)
         115200
     );
 
-    // --------------------------------------------------
-    // UART1
-    // --------------------------------------------------
-    // Serial is kept for the USB/serial monitor.
-    // Serial1 is the external UART connected to the device.
-
-    Serial1.begin(
-        UART_BAUDRATE,
-        SERIAL_8N1,
-        UART_RX_PIN,
-        UART_TX_PIN
-    );
 
     Serial.println(
         "[UART DEBUG] Serial1 initialized"
@@ -771,9 +759,6 @@ void loop(void)
         PHASE_BEFORE_TASKS;
 
     watchdog_feed();
-
-    // Check Serial1 RX before tasks_run() consumes the data.
-    debug_uart_rx();
 
     tasks_run();
 
