@@ -2,10 +2,12 @@
 #include <lvgl.h>
 
 #include "MainPage.h"
+#include "font_persian_14.h"
 #include "font_persian_16.h"
 #include "font_persian_24.h"
 #include "screen_manager.h"
 #include "system_error.h"
+#include "Animation.h"
 
 extern "C"
 {
@@ -18,6 +20,13 @@ extern "C"
 // ==================================================
 
 static bool page_was_active =
+    false;
+
+// ==================================================
+// Info Receive Text State
+// ==================================================
+
+static bool info_receive_text_visible =
     false;
 
 // ==================================================
@@ -105,7 +114,7 @@ static void configure_main_page_labels(void)
     }
 
     // --------------------------------------------------
-    // Voltage Static Label
+    // Voltage
     // --------------------------------------------------
 
     if (objects.voltage_label_main_static != NULL)
@@ -129,9 +138,34 @@ static void configure_main_page_labels(void)
             LV_STATE_DEFAULT
         );
     }
+            lv_obj_set_style_text_color(
+            objects.voltage_label_main_static,
+            lv_color_hex(0x7dde00),
+            LV_PART_MAIN |
+            LV_STATE_DEFAULT
+        );
 
     // --------------------------------------------------
-    // Current Static Label
+    // Voltage Dynamic
+    // --------------------------------------------------
+
+        lv_obj_set_style_text_font(
+            objects.voltage,
+            &font_persian_24,
+            LV_PART_MAIN |
+            LV_STATE_DEFAULT
+        );
+
+            lv_obj_set_style_text_color(
+            objects.voltage,
+            lv_color_hex(0x7dde00),
+            LV_PART_MAIN |
+            LV_STATE_DEFAULT
+        );
+
+
+    // --------------------------------------------------
+    // Current
     // --------------------------------------------------
 
     if (objects.current_label_main_static != NULL)
@@ -155,6 +189,165 @@ static void configure_main_page_labels(void)
             LV_STATE_DEFAULT
         );
     }
+            lv_obj_set_style_text_color(
+            objects.current_label_main_static,
+            lv_color_hex(0x7dde00),
+            LV_PART_MAIN |
+            LV_STATE_DEFAULT
+        );
+
+
+    // --------------------------------------------------
+    // Current
+    // --------------------------------------------------
+
+
+            lv_obj_set_style_text_font(
+            objects.current,
+            &font_persian_24,
+            LV_PART_MAIN |
+            LV_STATE_DEFAULT
+        );
+            lv_obj_set_style_text_color(
+            objects.current,
+            lv_color_hex(0x7dde00),
+            LV_PART_MAIN |
+            LV_STATE_DEFAULT
+        );
+
+    // --------------------------------------------------
+    // UART Receive Information
+    // --------------------------------------------------
+
+    if (objects.info_receive_text != NULL)
+    {
+        lv_label_set_text(
+            objects.info_receive_text,
+            "در حال دریافت اطلاعات"
+        );
+
+        lv_obj_set_pos(objects.info_receive_text, 130, 0);
+
+        lv_obj_set_style_text_font(
+            objects.info_receive_text,
+            &font_persian_14,
+            LV_PART_MAIN |
+            LV_STATE_DEFAULT
+        );
+
+        lv_obj_set_style_base_dir(
+            objects.info_receive_text,
+            LV_BASE_DIR_RTL,
+            LV_PART_MAIN |
+            LV_STATE_DEFAULT
+        );
+
+        lv_obj_set_style_text_color(
+            objects.info_receive_text,
+            lv_color_hex(0xEBF900),
+            LV_PART_MAIN |
+            LV_STATE_DEFAULT
+        );
+
+        // --------------------------------------------------
+        // IMPORTANT:
+        // Start hidden. It will only appear after the
+        // animation itself becomes active.
+        // --------------------------------------------------
+
+        lv_obj_add_flag(
+            objects.info_receive_text,
+            LV_OBJ_FLAG_HIDDEN
+        );
+
+        info_receive_text_visible =
+            false;
+    }
+}
+
+// ==================================================
+// Update Info Receive Text
+// ==================================================
+
+static void update_info_receive_text(void)
+{
+    if (objects.info_receive_text == NULL)
+    {
+        return;
+    }
+
+    // --------------------------------------------------
+    // Main screen only
+    // --------------------------------------------------
+
+    if (!screen_manager_is(SCREEN_ID_MAIN))
+    {
+        if (info_receive_text_visible)
+        {
+            lv_obj_add_flag(
+                objects.info_receive_text,
+                LV_OBJ_FLAG_HIDDEN
+            );
+
+            info_receive_text_visible =
+                false;
+        }
+
+        return;
+    }
+
+    // ==================================================
+    // IMPORTANT
+    //
+    // Do NOT use tasks_get_error_type() here.
+    //
+    // ERROR_NONE is also returned before the first UART
+    // packet, which caused the text to appear too early.
+    //
+    // The text follows the actual animation state.
+    // ==================================================
+
+    bool should_be_visible =
+        data_transfer_animation_is_active();
+
+    // --------------------------------------------------
+    // No state change
+    // --------------------------------------------------
+
+    if (
+        should_be_visible ==
+        info_receive_text_visible
+    )
+    {
+        return;
+    }
+
+    info_receive_text_visible =
+        should_be_visible;
+
+    // --------------------------------------------------
+    // Show
+    // --------------------------------------------------
+
+    if (should_be_visible)
+    {
+        lv_obj_clear_flag(
+            objects.info_receive_text,
+            LV_OBJ_FLAG_HIDDEN
+        );
+    }
+
+    // --------------------------------------------------
+    // Hide
+    // --------------------------------------------------
+
+    else
+    {
+        lv_obj_add_flag(
+            objects.info_receive_text,
+            LV_OBJ_FLAG_HIDDEN
+        );
+    }
 }
 
 // ==================================================
@@ -168,10 +361,6 @@ static void configure_message_box(void)
         return;
     }
 
-    // --------------------------------------------------
-    // Keep the EEZ-generated size and position
-    // --------------------------------------------------
-
     lv_obj_set_pos(
         objects.msg_box,
         43,
@@ -183,10 +372,6 @@ static void configure_message_box(void)
         228,
         128
     );
-
-    // --------------------------------------------------
-    // Default appearance
-    // --------------------------------------------------
 
     lv_obj_set_style_bg_color(
         objects.msg_box,
@@ -254,10 +439,6 @@ static void configure_message_box(void)
             objects.msg_box_text,
             LV_LABEL_LONG_WRAP
         );
-
-        // --------------------------------------------------
-        // Text area
-        // --------------------------------------------------
 
         lv_obj_set_width(
             objects.msg_box_text,
@@ -327,16 +508,8 @@ static void update_message_box(void)
     uint32_t box_color =
         MSGBOX_ERROR_COLOR;
 
-    // ==================================================
-    // Determine Message and Color
-    // ==================================================
-
     switch (error)
     {
-        // --------------------------------------------------
-        // UART Connection Warning
-        // --------------------------------------------------
-
         case ERROR_CONNECTION:
 
             message =
@@ -346,10 +519,6 @@ static void update_message_box(void)
                 MSGBOX_WARNING_COLOR;
 
             break;
-
-        // --------------------------------------------------
-        // Low Voltage Error
-        // --------------------------------------------------
 
         case ERROR_VOLTAGE_LOW:
 
@@ -361,10 +530,6 @@ static void update_message_box(void)
 
             break;
 
-        // --------------------------------------------------
-        // High Voltage Error
-        // --------------------------------------------------
-
         case ERROR_VOLTAGE_HIGH:
 
             message =
@@ -375,10 +540,6 @@ static void update_message_box(void)
 
             break;
 
-        // --------------------------------------------------
-        // No Error
-        // --------------------------------------------------
-
         default:
 
             message =
@@ -387,10 +548,6 @@ static void update_message_box(void)
             break;
     }
 
-    // ==================================================
-    // No State Change
-    // ==================================================
-
     if (error == last_msg_box_error)
     {
         return;
@@ -398,10 +555,6 @@ static void update_message_box(void)
 
     last_msg_box_error =
         error;
-
-    // ==================================================
-    // Hide Message Box
-    // ==================================================
 
     if (message == NULL)
     {
@@ -413,10 +566,6 @@ static void update_message_box(void)
         return;
     }
 
-    // ==================================================
-    // Set Message
-    // ==================================================
-
     if (objects.msg_box_text != NULL)
     {
         lv_label_set_text(
@@ -424,10 +573,6 @@ static void update_message_box(void)
             message
         );
     }
-
-    // ==================================================
-    // Set Box Color
-    // ==================================================
 
     lv_obj_set_style_bg_color(
         objects.msg_box,
@@ -442,10 +587,6 @@ static void update_message_box(void)
         LV_PART_MAIN |
         LV_STATE_DEFAULT
     );
-
-    // ==================================================
-    // Show
-    // ==================================================
 
     lv_obj_clear_flag(
         objects.msg_box,
@@ -462,6 +603,9 @@ void main_page_init(void)
     page_was_active =
         false;
 
+    info_receive_text_visible =
+        false;
+
     last_msg_box_error =
         ERROR_NONE;
 
@@ -469,6 +613,14 @@ void main_page_init(void)
     {
         lv_obj_add_flag(
             objects.msg_box,
+            LV_OBJ_FLAG_HIDDEN
+        );
+    }
+
+    if (objects.info_receive_text != NULL)
+    {
+        lv_obj_add_flag(
+            objects.info_receive_text,
             LV_OBJ_FLAG_HIDDEN
         );
     }
@@ -485,6 +637,20 @@ void main_page_update(void)
         page_was_active =
             false;
 
+        if (
+            objects.info_receive_text != NULL &&
+            info_receive_text_visible
+        )
+        {
+            lv_obj_add_flag(
+                objects.info_receive_text,
+                LV_OBJ_FLAG_HIDDEN
+            );
+
+            info_receive_text_visible =
+                false;
+        }
+
         return;
     }
 
@@ -499,6 +665,8 @@ void main_page_update(void)
         page_was_active =
             true;
     }
+
+    update_info_receive_text();
 
     update_message_box();
 }

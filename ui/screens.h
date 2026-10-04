@@ -23,16 +23,17 @@ typedef struct _objects_t {
     lv_obj_t *settings_page;
     lv_obj_t *buzzer_settings;
     lv_obj_t *v_c_range_settings;
+    lv_obj_t *led_main;
     lv_obj_t *voltage;
     lv_obj_t *btn_settings;
     lv_obj_t *settings_button_text;
     lv_obj_t *current;
-    lv_obj_t *obj0;
     lv_obj_t *status_text_main_page;
     lv_obj_t *voltage_label_main_static;
     lv_obj_t *current_label_main_static;
     lv_obj_t *msg_box;
     lv_obj_t *msg_box_text;
+    lv_obj_t *info_receive_text;
     lv_obj_t *exit_settings;
     lv_obj_t *exit_label_settinhs_page;
     lv_obj_t *buzzer;
@@ -42,7 +43,7 @@ typedef struct _objects_t {
     lv_obj_t *voltage_range;
     lv_obj_t *vc_range_text_settings_page;
     lv_obj_t *settings_text_settings_page;
-    lv_obj_t *obj1;
+    lv_obj_t *obj0;
     lv_obj_t *buzzer_settings_page_label;
     lv_obj_t *buzzer_settings_page_back_button;
     lv_obj_t *back_text_buzzer_page;
