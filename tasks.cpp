@@ -25,11 +25,21 @@ extern lv_obj_t *tick_value_change_obj;
 // ==================================================
 // Hardware Configuration
 // ==================================================
+//
+// 4D Systems gen4-ESP32:
+//
+// FFC Pin 2  -> GPIO17
+// FFC Pin 3  -> GPIO18
+// FFC Pin 4  -> GPIO16
+//
+// GPIO22 / GPIO23 / GPIO25 are NOT valid GPIO choices
+// for this ESP32-S3 module.
+//
 
-#define BTN_RIGHT   22
-#define BTN_SELECT  23
+#define BTN_RIGHT   17
+#define BTN_SELECT  18
 
-#define BUZZER_PIN  25
+#define BUZZER_PIN  16
 #define BUZZER_FREQ 2000
 #define BUZZER_LEDC_CHANNEL 0
 #define BUZZER_LEDC_RESOLUTION 10

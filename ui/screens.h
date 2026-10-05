@@ -15,7 +15,8 @@ enum ScreensEnum {
     SCREEN_ID_SETTINGS_PAGE = 2,
     SCREEN_ID_BUZZER_SETTINGS = 3,
     SCREEN_ID_V_C_RANGE_SETTINGS = 4,
-    _SCREEN_ID_LAST = 4
+    SCREEN_ID_UPDATE_PAGE = 5,
+    _SCREEN_ID_LAST = 5
 };
 
 typedef struct _objects_t {
@@ -23,6 +24,7 @@ typedef struct _objects_t {
     lv_obj_t *settings_page;
     lv_obj_t *buzzer_settings;
     lv_obj_t *v_c_range_settings;
+    lv_obj_t *update_page;
     lv_obj_t *led_main;
     lv_obj_t *voltage;
     lv_obj_t *btn_settings;
@@ -43,7 +45,9 @@ typedef struct _objects_t {
     lv_obj_t *voltage_range;
     lv_obj_t *vc_range_text_settings_page;
     lv_obj_t *settings_text_settings_page;
-    lv_obj_t *obj0;
+    lv_obj_t *update_button_setting;
+    lv_obj_t *update_text_setting;
+    lv_obj_t *buzzer_drop_down_menu;
     lv_obj_t *buzzer_settings_page_label;
     lv_obj_t *buzzer_settings_page_back_button;
     lv_obj_t *back_text_buzzer_page;
@@ -62,6 +66,12 @@ typedef struct _objects_t {
     lv_obj_t *current_maximum;
     lv_obj_t *exit_from_v_c_menu_button;
     lv_obj_t *exit_from_v_c_menu_text;
+    lv_obj_t *update_exit_button;
+    lv_obj_t *update_exit_text;
+    lv_obj_t *update_button;
+    lv_obj_t *update_button_text;
+    lv_obj_t *update_page_title;
+    lv_obj_t *update_status_text;
 } objects_t;
 
 extern objects_t objects;
@@ -77,6 +87,9 @@ void tick_screen_buzzer_settings();
 
 void create_screen_v_c_range_settings();
 void tick_screen_v_c_range_settings();
+
+void create_screen_update_page();
+void tick_screen_update_page();
 
 void tick_screen_by_id(enum ScreensEnum screenId);
 void tick_screen(int screen_index);

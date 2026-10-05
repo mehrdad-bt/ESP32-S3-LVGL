@@ -2,6 +2,7 @@
 #include <lvgl.h>
 
 #include "screen_manager.h"
+#include "USBUpdate.h"
 
 extern "C"
 {
@@ -12,8 +13,9 @@ void debug_runtime(
 );
 }
 
+
 // ==================================================
-// State
+// CURRENT SCREEN
 // ==================================================
 
 static enum ScreensEnum current_screen =
@@ -28,8 +30,9 @@ static bool screen_change_pending =
 static bool screen_reload_pending =
     false;
 
+
 // ==================================================
-// Screen Name
+// SCREEN NAME
 // ==================================================
 
 static const char *screen_name(
@@ -50,13 +53,17 @@ static const char *screen_name(
         case SCREEN_ID_V_C_RANGE_SETTINGS:
             return "V_C_RANGE";
 
+        case SCREEN_ID_UPDATE_PAGE:
+            return "UPDATE";
+
         default:
             return "UNKNOWN";
     }
 }
 
+
 // ==================================================
-// Get Screen Object
+// SCREEN OBJECT
 // ==================================================
 
 static lv_obj_t *get_screen_object(
@@ -77,13 +84,17 @@ static lv_obj_t *get_screen_object(
         case SCREEN_ID_V_C_RANGE_SETTINGS:
             return objects.v_c_range_settings;
 
+        case SCREEN_ID_UPDATE_PAGE:
+            return objects.update_page;
+
         default:
             return NULL;
     }
 }
 
+
 // ==================================================
-// Load Screen
+// LOAD SCREEN NOW
 // ==================================================
 
 static void load_screen_now(
@@ -93,21 +104,24 @@ static void load_screen_now(
     uint32_t start =
         micros();
 
+
     lv_obj_t *screen_obj =
         get_screen_object(
             screen
         );
 
+
     Serial.printf(
         "[DBG][SCREEN] LOAD %s from %s obj=%s\n",
         screen_name(screen),
         screen_name(current_screen),
-        screen_obj != NULL
-        ? "VALID"
-        : "NULL"
+        screen_obj != NULL ? "VALID" : "NULL"
     );
 
-    if (screen_obj == NULL)
+
+    if (
+        screen_obj == NULL
+    )
     {
         Serial.println(
             "[DBG][SCREEN] ERROR target NULL"
@@ -115,6 +129,7 @@ static void load_screen_now(
 
         return;
     }
+
 
     if (
         screen ==
@@ -128,19 +143,19 @@ static void load_screen_now(
         return;
     }
 
-    // --------------------------------------------------
-    // Actual screen load
-    // --------------------------------------------------
 
     lv_scr_load(
         screen_obj
     );
 
+
     current_screen =
         screen;
 
+
     uint32_t elapsed =
         micros() - start;
+
 
     Serial.printf(
         "[DBG][SCREEN] LOAD DONE %s dt=%lu us\n",
@@ -148,8 +163,10 @@ static void load_screen_now(
         elapsed
     );
 
+
     if (
-        elapsed > 100000U
+        elapsed >
+        100000U
     )
     {
         debug_runtime(
@@ -158,8 +175,9 @@ static void load_screen_now(
     }
 }
 
+
 // ==================================================
-// Init
+// INIT
 // ==================================================
 
 void screen_manager_init(void)
@@ -176,11 +194,14 @@ void screen_manager_init(void)
     screen_reload_pending =
         false;
 
+
     lv_obj_t *main_screen =
         objects.main;
 
+
     if (
-        main_screen == NULL
+        main_screen ==
+        NULL
     )
     {
         Serial.println(
@@ -190,21 +211,25 @@ void screen_manager_init(void)
         return;
     }
 
+
     Serial.println(
         "[DBG][SCREEN] loading MAIN"
     );
 
+
     lv_scr_load(
         main_screen
     );
+
 
     Serial.println(
         "[DBG][SCREEN] MAIN loaded"
     );
 }
 
+
 // ==================================================
-// Request Screen Change
+// SHOW SCREEN
 // ==================================================
 
 void screen_manager_show(
@@ -216,17 +241,18 @@ void screen_manager_show(
             screen
         );
 
+
     Serial.printf(
         "[DBG][SCREEN] REQUEST %s from %s target=%s\n",
         screen_name(screen),
         screen_name(current_screen),
-        target != NULL
-        ? "VALID"
-        : "NULL"
+        target != NULL ? "VALID" : "NULL"
     );
 
+
     if (
-        target == NULL
+        target ==
+        NULL
     )
     {
         Serial.println(
@@ -236,9 +262,11 @@ void screen_manager_show(
         return;
     }
 
+
     if (
         screen_change_pending &&
-        pending_screen == screen
+        pending_screen ==
+            screen
     )
     {
         Serial.println(
@@ -248,9 +276,11 @@ void screen_manager_show(
         return;
     }
 
+
     if (
         !screen_change_pending &&
-        current_screen == screen
+        current_screen ==
+            screen
     )
     {
         Serial.println(
@@ -259,6 +289,7 @@ void screen_manager_show(
 
         return;
     }
+
 
     pending_screen =
         screen;
@@ -269,14 +300,16 @@ void screen_manager_show(
     screen_reload_pending =
         false;
 
+
     Serial.printf(
         "[DBG][SCREEN] REQUEST PENDING %s\n",
         screen_name(pending_screen)
     );
 }
 
+
 // ==================================================
-// Reload Current Screen
+// RELOAD
 // ==================================================
 
 void screen_manager_reload(void)
@@ -290,18 +323,31 @@ void screen_manager_reload(void)
     screen_reload_pending =
         true;
 
+
     Serial.printf(
         "[DBG][SCREEN] RELOAD REQUEST %s\n",
         screen_name(current_screen)
     );
 }
 
+
 // ==================================================
-// Process
+// PROCESS
 // ==================================================
 
 void screen_manager_process(void)
 {
+    // --------------------------------------------------
+    // USB update UI always runs inside LVGL task context
+    // --------------------------------------------------
+
+    usb_update_gui_update();
+
+
+    // --------------------------------------------------
+    // No pending screen change
+    // --------------------------------------------------
+
     if (
         !screen_change_pending
     )
@@ -309,17 +355,20 @@ void screen_manager_process(void)
         return;
     }
 
+
     enum ScreensEnum requested =
         pending_screen;
 
     bool reload =
         screen_reload_pending;
 
+
     screen_change_pending =
         false;
 
     screen_reload_pending =
         false;
+
 
     Serial.printf(
         "[DBG][SCREEN] PROCESS target=%s current=%s reload=%d\n",
@@ -328,10 +377,15 @@ void screen_manager_process(void)
         reload ? 1 : 0
     );
 
+
+    // --------------------------------------------------
+    // Reload same screen
+    // --------------------------------------------------
+
     if (
         reload &&
         requested ==
-        current_screen
+            current_screen
     )
     {
         lv_obj_t *screen_obj =
@@ -339,8 +393,10 @@ void screen_manager_process(void)
                 requested
             );
 
+
         if (
-            screen_obj == NULL
+            screen_obj ==
+            NULL
         )
         {
             Serial.println(
@@ -350,9 +406,11 @@ void screen_manager_process(void)
             return;
         }
 
+
         lv_obj_invalidate(
             screen_obj
         );
+
 
         Serial.println(
             "[DBG][SCREEN] RELOAD DONE"
@@ -360,6 +418,11 @@ void screen_manager_process(void)
 
         return;
     }
+
+
+    // --------------------------------------------------
+    // Ignore same screen
+    // --------------------------------------------------
 
     if (
         requested ==
@@ -373,13 +436,19 @@ void screen_manager_process(void)
         return;
     }
 
+
+    // --------------------------------------------------
+    // Load requested screen
+    // --------------------------------------------------
+
     load_screen_now(
         requested
     );
 }
 
+
 // ==================================================
-// Get Current
+// GET CURRENT
 // ==================================================
 
 enum ScreensEnum screen_manager_get(void)
@@ -387,8 +456,9 @@ enum ScreensEnum screen_manager_get(void)
     return current_screen;
 }
 
+
 // ==================================================
-// Is Current
+// IS SCREEN
 // ==================================================
 
 bool screen_manager_is(

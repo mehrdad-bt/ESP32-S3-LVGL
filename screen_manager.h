@@ -10,6 +10,11 @@ extern "C"
 
 #include "ui/screens.h"
 
+
+// ==================================================
+// API
+// ==================================================
+
 void screen_manager_init(void);
 
 void screen_manager_show(
@@ -25,6 +30,7 @@ enum ScreensEnum screen_manager_get(void);
 bool screen_manager_is(
     enum ScreensEnum screen
 );
+
 
 #ifdef __cplusplus
 }
