@@ -8,13 +8,8 @@
 // UART Configuration
 // ==================================================
 
-// !!! شماره GPIO واقعی RX بردت را اینجا قرار بده !!!
 #define UART_RX_PIN        44
-
-// اگر TX لازم نداری، می‌توانی -1 بگذاری.
-// فعلاً برای UART کامل روی GPIO43 قرار داده شده.
 #define UART_TX_PIN        43
-
 #define UART_BAUDRATE      115200
 
 // ==================================================
@@ -24,9 +19,7 @@
 #define UART_BUFFER_SIZE        128
 #define UART_MAX_BYTES_PER_CALL 32
 
-static char uart_buffer[
-    UART_BUFFER_SIZE
-];
+static char uart_buffer[UART_BUFFER_SIZE];
 
 static uint16_t uart_index =
     0;
@@ -48,9 +41,7 @@ static bool uart_values_ready =
 // Last Complete Message
 // ==================================================
 
-static char uart_message[
-    UART_BUFFER_SIZE
-];
+static char uart_message[UART_BUFFER_SIZE];
 
 static bool uart_message_ready =
     false;
@@ -64,21 +55,13 @@ extern "C"
 
 void serial_init(void)
 {
-    /*
-     * Serial:
-     * فقط برای Debug و Serial Monitor
-     */
-    Serial.begin(
-        115200
-    );
+    // --------------------------------------------------
+    // Serial0 = Debug / Serial Monitor
+    // Serial1 = External Device UART
+    // RX = GPIO44
+    // TX = GPIO43
+    // --------------------------------------------------
 
-    /*
-     * Serial1:
-     * UART واقعی دستگاه
-     *
-     * RX = GPIO44
-     * TX = GPIO43
-     */
     Serial1.begin(
         UART_BAUDRATE,
         SERIAL_8N1,
@@ -106,12 +89,6 @@ void uart_receive(void)
 {
     uint16_t processed_bytes =
         0;
-
-    /*
-     * در هر بار اجرا حداکثر
-     * UART_MAX_BYTES_PER_CALL
-     * بایت پردازش می‌کنیم.
-     */
 
     while (
         Serial1.available() &&
@@ -162,11 +139,9 @@ void uart_receive(void)
                 );
 
                 // --------------------------------------------------
-                // Parse:
+                // Expected format:
                 // Voltage,Current
-                //
-                // Example:
-                // 23.75,0.82
+                // Example: 23.75,0.82
                 // --------------------------------------------------
 
                 float voltage =
@@ -238,11 +213,6 @@ void uart_receive(void)
                 uart_index =
                     0;
             }
-
-            /*
-             * اگر چند newline پشت سر هم وجود داشته باشد،
-             * پیام خالی نادیده گرفته می‌شود.
-             */
         }
 
         // --------------------------------------------------
@@ -266,10 +236,8 @@ void uart_receive(void)
                     "[UART] BUFFER OVERFLOW"
                 );
 
-                /*
-                 * تا newline بعدی
-                 * پیام فعلی را دور می‌ریزیم.
-                 */
+                // Discard the current message
+                // until the next newline.
                 uart_index =
                     0;
             }

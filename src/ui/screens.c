@@ -164,7 +164,7 @@ void create_screen_main() {
         }
         {
             // msg_box
-            lv_obj_t *obj = lv_msgbox_create(parent_obj, "", "", 0, true);
+            lv_obj_t *obj = lv_msgbox_create(parent_obj, "", "", 0, false);
             objects.msg_box = obj;
             lv_obj_set_pos(obj, 43, 56);
             lv_obj_set_size(obj, 228, 128);
