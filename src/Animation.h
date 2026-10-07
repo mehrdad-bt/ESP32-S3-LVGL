@@ -2,11 +2,11 @@
 #define ANIMATION_H
 
 #include <lvgl.h>
+#include <stdint.h>
 
-
-/* ==================================================
- * Waiting Dots
- * ================================================== */
+// ==================================================
+// Waiting Dots
+// ==================================================
 
 void Animation_CreateWaitingDots(
     lv_obj_t *parent,
@@ -14,21 +14,28 @@ void Animation_CreateWaitingDots(
     int32_t y
 );
 
+// ==================================================
+// UART Data Transfer Animation
+// ==================================================
 
-/* ==================================================
- * Data Transfer Animation
- * ================================================== */
-
-void data_transfer_animation_start(
+void data_transfer_animation_init(
     lv_obj_t *parent
 );
 
-void data_transfer_animation_stop(
-    void
+void data_transfer_animation_start(void);
+
+void data_transfer_animation_stop(void);
+
+void data_transfer_animation_reset(void);
+
+void data_transfer_animation_update(
+    uint32_t now
 );
 
-void data_transfer_animation_reset(
-    void
-);
+// ==================================================
+// Animation State
+// ==================================================
 
-#endif /* ANIMATION_H */
+bool data_transfer_animation_is_active(void);
+
+#endif

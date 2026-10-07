@@ -1,4 +1,3 @@
-
 #include <Arduino.h>
 #include <lvgl.h>
 #include <stdio.h>
@@ -21,15 +20,36 @@ extern lv_obj_t *tick_value_change_obj;
 #include "SettingsPage.h"
 #include "BuzzerPage.h"
 #include "VCRangePage.h"
+#include "Animation.h"
 
 // ==================================================
 // Hardware Configuration
 // ==================================================
 
-#define BTN_RIGHT   22
-#define BTN_SELECT  23
+// --------------------------------------------------
+// Buttons
+// --------------------------------------------------
+// فعلاً غیرفعال هستند.
+// بعداً GPIO واقعی را اینجا وارد کن.
+//
+// #define BTN_RIGHT   xx
+// #define BTN_SELECT  xx
+//
+// برای فعال کردن:
+// #define BUTTONS_ENABLED 1
 
-#define BUZZER_PIN  25
+#define BUTTONS_ENABLED 0
+
+// --------------------------------------------------
+// Buzzer
+// --------------------------------------------------
+// فعلاً غیرفعال است.
+// بعداً GPIO واقعی را اینجا وارد کن.
+//
+// #define BUZZER_PIN  xx
+
+#define BUZZER_ENABLED 0
+
 #define BUZZER_FREQ 2000
 #define BUZZER_LEDC_CHANNEL 0
 #define BUZZER_LEDC_RESOLUTION 10
@@ -92,9 +112,6 @@ extern lv_obj_t *tick_value_change_obj;
 #define CURRENT_LIMIT_MIN 0.0f
 #define CURRENT_LIMIT_MAX 3.0f
 
-// ErrorType is declared in system_error.h so the MainPage module
-// can read the current error without exposing SystemState.
-
 // ==================================================
 // System State
 // ==================================================
@@ -152,17 +169,29 @@ static float current_max_limit =
 // ==================================================
 
 static uint32_t last_valid_uart_time = 0;
-static bool valid_uart_received_once = false;
+
+static bool valid_uart_received_once =
+    false;
 
 // ==================================================
 // Button State
 // ==================================================
 
-static bool right_last_state = HIGH;
-static bool select_last_state = HIGH;
+#if BUTTONS_ENABLED
 
-static uint32_t right_last_change = 0;
-static uint32_t select_last_change = 0;
+static bool right_last_state =
+    HIGH;
+
+static bool select_last_state =
+    HIGH;
+
+static uint32_t right_last_change =
+    0;
+
+static uint32_t select_last_change =
+    0;
+
+#endif
 
 // ==================================================
 // Menu State
@@ -192,7 +221,6 @@ static uint8_t buzzer_phase =
 
 // ==================================================
 // Buzzer LEDC State
-// Arduino-ESP32 2.x API
 // ==================================================
 
 static bool buzzer_ledc_initialized =
@@ -215,12 +243,6 @@ static bool buzzer_focus_back =
 // Voltage / Current UI State
 // ==================================================
 
-// 0 = Voltage minimum
-// 1 = Voltage maximum
-// 2 = Current minimum
-// 3 = Current maximum
-// 4 = Back button
-
 static uint8_t vc_focus =
     0;
 
@@ -230,10 +252,6 @@ static bool vc_edit_mode =
 // ==================================================
 // LED Runtime State
 // ==================================================
-
-// The LED has its own visual state. Using only ErrorType here was
-// not enough because ERROR_NONE can mean both "no data yet" and
-// "data received and system OK".
 
 enum LedVisualState
 {
@@ -316,6 +334,7 @@ static void update_input_focus_gui(void);
 
 static void led_bisect_style(void);
 static void led_apply_color(uint32_t color);
+static void led_turn_off(void);
 static void set_status_led(uint32_t color);
 static void set_status_led_blink(uint32_t color);
 static void update_led_state(void);
@@ -325,26 +344,6 @@ static ErrorType get_error_type(void);
 static bool main_screen_active(void);
 static bool vc_range_screen_active(void);
 static bool buzzer_screen_active(void);
-
-
-// ==================================================
-// Page-Owned Public Functions
-// ==================================================
-// These functions are implemented in BuzzerPage.cpp and
-// VCRangePage.cpp. Only their declarations belong here.
-
-void buzzer_set_mode(uint8_t mode);
-uint8_t buzzer_get_mode(void);
-
-void set_voltage_min_limit(float value);
-void set_voltage_max_limit(float value);
-float get_voltage_min_limit(void);
-float get_voltage_max_limit(void);
-
-void set_current_min_limit(float value);
-void set_current_max_limit(float value);
-float get_current_min_limit(void);
-float get_current_max_limit(void);
 
 static void buttons_task(void);
 
@@ -366,7 +365,23 @@ static void apply_vc_focus(void);
 static void handle_right_release(void);
 static void handle_select_release(void);
 
-// Page-owned input handlers
+// ==================================================
+// Page-Owned Public Functions
+// ==================================================
+
+void buzzer_set_mode(uint8_t mode);
+uint8_t buzzer_get_mode(void);
+
+void set_voltage_min_limit(float value);
+void set_voltage_max_limit(float value);
+float get_voltage_min_limit(void);
+float get_voltage_max_limit(void);
+
+void set_current_min_limit(float value);
+void set_current_max_limit(float value);
+float get_current_min_limit(void);
+float get_current_max_limit(void);
+
 void buzzer_page_handle_right(void);
 void buzzer_page_handle_select(void);
 void vc_range_page_handle_right(void);
@@ -404,6 +419,8 @@ static bool buzzer_screen_active(void)
 
 static void buzzer_init_ledc(void)
 {
+#if BUZZER_ENABLED
+
     if (buzzer_ledc_initialized)
     {
         return;
@@ -436,6 +453,13 @@ static void buzzer_init_ledc(void)
 
     buzzer_ledc_initialized =
         true;
+
+#else
+
+    buzzer_ledc_initialized =
+        false;
+
+#endif
 }
 
 // ==================================================
@@ -444,6 +468,8 @@ static void buzzer_init_ledc(void)
 
 static void buzzer_start(void)
 {
+#if BUZZER_ENABLED
+
     if (!buzzer_ledc_initialized)
     {
         return;
@@ -453,6 +479,8 @@ static void buzzer_start(void)
         BUZZER_LEDC_CHANNEL,
         BUZZER_FREQ
     );
+
+#endif
 }
 
 // ==================================================
@@ -461,6 +489,8 @@ static void buzzer_start(void)
 
 static void buzzer_stop(void)
 {
+#if BUZZER_ENABLED
+
     if (!buzzer_ledc_initialized)
     {
         return;
@@ -470,6 +500,8 @@ static void buzzer_stop(void)
         BUZZER_LEDC_CHANNEL,
         0
     );
+
+#endif
 }
 
 // ==================================================
@@ -492,9 +524,8 @@ static void buzzer_dropdown_find(void)
 }
 
 // ==================================================
-// Buzzer Mode Control
+// Update V/C Range GUI
 // ==================================================
-
 
 static void update_vc_range_gui(void)
 {
@@ -616,7 +647,7 @@ static void update_vc_range_gui(void)
     }
 
     // --------------------------------------------------
-    // Synchronize voltage minimum slider
+    // Voltage minimum slider
     // --------------------------------------------------
 
     if (objects.voltage_minimum != NULL)
@@ -646,7 +677,7 @@ static void update_vc_range_gui(void)
     }
 
     // --------------------------------------------------
-    // Synchronize voltage maximum slider
+    // Voltage maximum slider
     // --------------------------------------------------
 
     if (objects.voltage_maximum != NULL)
@@ -676,7 +707,7 @@ static void update_vc_range_gui(void)
     }
 
     // --------------------------------------------------
-    // Synchronize current minimum slider
+    // Current minimum slider
     // --------------------------------------------------
 
     if (objects.current_minimum != NULL)
@@ -706,7 +737,7 @@ static void update_vc_range_gui(void)
     }
 
     // --------------------------------------------------
-    // Synchronize current maximum slider
+    // Current maximum slider
     // --------------------------------------------------
 
     if (objects.current_maximum != NULL)
@@ -777,18 +808,37 @@ static void update_buzzer_gui(void)
     }
 }
 
-// // ==================================================
-// // LED Simple Style
-// // ==================================================
+// ==================================================
+// LED Simple Style
+// ==================================================
 
 static void led_bisect_style(void)
 {
-    if (objects.led_main == NULL) return;
+    if (objects.led_main == NULL)
+    {
+        return;
+    }
 
-   
-    lv_obj_set_style_shadow_width(objects.led_main, 0, LV_PART_MAIN | LV_STATE_DEFAULT);
-    lv_obj_set_style_shadow_spread(objects.led_main, 0, LV_PART_MAIN | LV_STATE_DEFAULT);
-    lv_obj_set_style_border_width(objects.led_main, 0, LV_PART_MAIN | LV_STATE_DEFAULT);
+    lv_obj_set_style_shadow_width(
+        objects.led_main,
+        0,
+        LV_PART_MAIN |
+        LV_STATE_DEFAULT
+    );
+
+    lv_obj_set_style_shadow_spread(
+        objects.led_main,
+        0,
+        LV_PART_MAIN |
+        LV_STATE_DEFAULT
+    );
+
+    lv_obj_set_style_border_width(
+        objects.led_main,
+        0,
+        LV_PART_MAIN |
+        LV_STATE_DEFAULT
+    );
 }
 
 // ==================================================
@@ -807,8 +857,6 @@ static void led_apply_color(uint32_t color)
         return;
     }
 
-    // obj0 is an LVGL LED object. Its visible color is controlled
-    // by the lv_led API, not by the generic object background style.
     lv_led_set_color(
         objects.led_main,
         lv_color_hex(color)
@@ -819,6 +867,10 @@ static void led_apply_color(uint32_t color)
         255
     );
 }
+
+// ==================================================
+// LED OFF
+// ==================================================
 
 static void led_turn_off(void)
 {
@@ -1490,10 +1542,6 @@ static void handle_right_release(void)
     enum ScreensEnum screen =
         screen_manager_get();
 
-    // --------------------------------------------------
-    // Main screen
-    // --------------------------------------------------
-
     if (
         screen ==
         SCREEN_ID_MAIN
@@ -1504,10 +1552,6 @@ static void handle_right_release(void)
 
         return;
     }
-
-    // --------------------------------------------------
-    // Settings screen
-    // --------------------------------------------------
 
     if (
         screen ==
@@ -1530,10 +1574,6 @@ static void handle_right_release(void)
         return;
     }
 
-    // --------------------------------------------------
-    // Buzzer screen
-    // --------------------------------------------------
-
     if (
         screen ==
         SCREEN_ID_BUZZER_SETTINGS
@@ -1542,10 +1582,6 @@ static void handle_right_release(void)
         buzzer_page_handle_right();
         return;
     }
-
-    // --------------------------------------------------
-    // V/C screen
-    // --------------------------------------------------
 
     if (
         screen ==
@@ -1566,10 +1602,6 @@ static void handle_select_release(void)
     enum ScreensEnum screen =
         screen_manager_get();
 
-    // --------------------------------------------------
-    // Main screen
-    // --------------------------------------------------
-
     if (
         screen ==
         SCREEN_ID_MAIN
@@ -1587,10 +1619,6 @@ static void handle_select_release(void)
 
         return;
     }
-
-    // --------------------------------------------------
-    // Settings screen
-    // --------------------------------------------------
 
     if (
         screen ==
@@ -1632,16 +1660,11 @@ static void handle_select_release(void)
                 break;
 
             default:
-
                 break;
         }
 
         return;
     }
-
-    // --------------------------------------------------
-    // Buzzer screen
-    // --------------------------------------------------
 
     if (
         screen ==
@@ -1651,10 +1674,6 @@ static void handle_select_release(void)
         buzzer_page_handle_select();
         return;
     }
-
-    // --------------------------------------------------
-    // V/C screen
-    // --------------------------------------------------
 
     if (
         screen ==
@@ -1672,6 +1691,8 @@ static void handle_select_release(void)
 
 static void buttons_task(void)
 {
+#if BUTTONS_ENABLED
+
     bool right_state =
         digitalRead(
             BTN_RIGHT
@@ -1686,7 +1707,7 @@ static void buttons_task(void)
         millis();
 
     // --------------------------------------------------
-    // RIGHT button
+    // RIGHT
     // --------------------------------------------------
 
     if (
@@ -1705,7 +1726,6 @@ static void buttons_task(void)
             right_last_state =
                 right_state;
 
-            // Only act on release
             if (
                 right_state == HIGH
             )
@@ -1716,7 +1736,7 @@ static void buttons_task(void)
     }
 
     // --------------------------------------------------
-    // SELECT button
+    // SELECT
     // --------------------------------------------------
 
     if (
@@ -1735,7 +1755,6 @@ static void buttons_task(void)
             select_last_state =
                 select_state;
 
-            // Only act on release
             if (
                 select_state == HIGH
             )
@@ -1744,6 +1763,12 @@ static void buttons_task(void)
             }
         }
     }
+
+#else
+
+    return;
+
+#endif
 }
 
 // ==================================================
@@ -1800,7 +1825,7 @@ static void safety_task(void)
         millis();
 
     // --------------------------------------------------
-    // UART connection state
+    // UART state
     // --------------------------------------------------
 
     if (!valid_uart_received_once)
@@ -1871,7 +1896,7 @@ static void safety_task(void)
         );
 
     // --------------------------------------------------
-    // Low voltage detection
+    // Low voltage
     // --------------------------------------------------
 
     system_state.low_voltage =
@@ -1881,7 +1906,7 @@ static void safety_task(void)
         );
 
     // --------------------------------------------------
-    // Overall system state
+    // Overall state
     // --------------------------------------------------
 
     system_state.system_ok =
@@ -1897,6 +1922,8 @@ static void safety_task(void)
 
 static void buzzer_task(void)
 {
+#if BUZZER_ENABLED
+
     if (
         !system_state.data_received ||
         system_state.connection_lost
@@ -1932,10 +1959,6 @@ static void buzzer_task(void)
     uint32_t interval =
         0;
 
-    // --------------------------------------------------
-    // Mode 1
-    // --------------------------------------------------
-
     if (
         buzzer_get_mode() ==
         BUZZER_MODE_1
@@ -1946,11 +1969,6 @@ static void buzzer_task(void)
             200 :
             700;
     }
-
-    // --------------------------------------------------
-    // Mode 2
-    // --------------------------------------------------
-
     else if (
         buzzer_get_mode() ==
         BUZZER_MODE_2
@@ -1959,11 +1977,6 @@ static void buzzer_task(void)
         interval =
             100;
     }
-
-    // --------------------------------------------------
-    // Mode 3
-    // --------------------------------------------------
-
     else
     {
         interval =
@@ -2009,6 +2022,12 @@ static void buzzer_task(void)
             }
         }
     }
+
+#else
+
+    return;
+
+#endif
 }
 
 // ==================================================
@@ -2017,8 +2036,6 @@ static void buzzer_task(void)
 
 static ErrorType get_error_type(void)
 {
-    // At startup there has never been a connection to lose.
-    // Keep the LED blue until the first valid UART packet is received.
     if (!valid_uart_received_once)
     {
         return ERROR_NONE;
@@ -2088,7 +2105,6 @@ static void gui_update(void)
 
     if (main_screen_active())
     {
-        // Voltage display
         if (
             objects.voltage != NULL &&
             system_state.voltage !=
@@ -2113,7 +2129,6 @@ static void gui_update(void)
                 system_state.voltage;
         }
 
-        // Current display
         if (
             objects.current != NULL &&
             system_state.current !=
@@ -2137,7 +2152,6 @@ static void gui_update(void)
             gui_last_current =
                 system_state.current;
         }
-
     }
 
     // --------------------------------------------------
@@ -2174,10 +2188,40 @@ static void gui_task(void)
         now;
 
     gui_update();
+
     update_led_state();
 
-    // Keep EEZ screen tick synchronized with
-    // the screen manager.
+    // ==================================================
+    // UART Transfer Animation
+    // ==================================================
+
+    bool uart_connected =
+        valid_uart_received_once &&
+        system_state.data_received &&
+        !system_state.connection_lost &&
+        !system_state.uart_timeout;
+
+    bool animation_should_run =
+        main_screen_active() &&
+        uart_connected;
+
+    if (animation_should_run)
+    {
+        data_transfer_animation_start();
+
+        data_transfer_animation_update(
+            now
+        );
+    }
+    else
+    {
+        data_transfer_animation_stop();
+    }
+
+    // --------------------------------------------------
+    // EEZ screen tick
+    // --------------------------------------------------
+
     if (!vc_range_screen_active())
     {
         int16_t screen_index =
@@ -2202,9 +2246,6 @@ static void gui_task(void)
 
 static void update_led_state(void)
 {
-    // The LED belongs to the MAIN screen. Do not touch the LVGL
-    // object while another screen is loaded. Force a refresh when
-    // MAIN is entered again.
     if (!main_screen_active())
     {
         led_gui_initialized =
@@ -2212,7 +2253,6 @@ static void update_led_state(void)
 
         return;
     }
-
 
     if (objects.led_main == NULL)
     {
@@ -2224,18 +2264,11 @@ static void update_led_state(void)
 
     LedVisualState desired_state;
 
-    // --------------------------------------------------
-    // No UART packet has ever arrived
-    // --------------------------------------------------
     if (!valid_uart_received_once)
     {
         desired_state =
             LED_VISUAL_BLUE;
     }
-
-    // --------------------------------------------------
-    // Connection was working before, but is now lost
-    // --------------------------------------------------
     else if (
         error == ERROR_CONNECTION
     )
@@ -2243,10 +2276,6 @@ static void update_led_state(void)
         desired_state =
             LED_VISUAL_ORANGE_BLINK;
     }
-
-    // --------------------------------------------------
-    // Valid data + no safety error
-    // --------------------------------------------------
     else if (
         error == ERROR_NONE
     )
@@ -2254,19 +2283,12 @@ static void update_led_state(void)
         desired_state =
             LED_VISUAL_GREEN;
     }
-
-    // --------------------------------------------------
-    // Valid data + voltage/current fault
-    // --------------------------------------------------
     else
     {
         desired_state =
             LED_VISUAL_RED_BLINK;
     }
 
-    // --------------------------------------------------
-    // State changed or MAIN was entered again
-    // --------------------------------------------------
     if (
         !led_gui_initialized ||
         desired_state != led_visual_state
@@ -2322,11 +2344,6 @@ static void update_led_state(void)
         }
     }
 
-    // --------------------------------------------------
-    // Blink timing is handled here, inside gui_task().
-    // There is no separate led_task() at the end of
-    // tasks_run(), which keeps the WDT-sensitive path short.
-    // --------------------------------------------------
     if (
         desired_state == LED_VISUAL_ORANGE_BLINK ||
         desired_state == LED_VISUAL_RED_BLINK
@@ -2349,9 +2366,12 @@ static void update_led_state(void)
             if (led_blink_state)
             {
                 uint32_t color =
-                    (desired_state == LED_VISUAL_ORANGE_BLINK)
-                        ? LED_ORANGE
-                        : LED_RED;
+                    (
+                        desired_state ==
+                        LED_VISUAL_ORANGE_BLINK
+                    )
+                    ? LED_ORANGE
+                    : LED_RED;
 
                 led_apply_color(
                     color
@@ -2372,8 +2392,10 @@ static void update_led_state(void)
 void tasks_init(void)
 {
     // --------------------------------------------------
-    // Initialize hardware inputs
+    // Hardware inputs
     // --------------------------------------------------
+
+#if BUTTONS_ENABLED
 
     pinMode(
         BTN_RIGHT,
@@ -2385,16 +2407,21 @@ void tasks_init(void)
         INPUT_PULLUP
     );
 
+#endif
+
     // --------------------------------------------------
-    // Initialize buzzer
+    // Buzzer
     // --------------------------------------------------
 
     buzzer_init_ledc();
+
     buzzer_stop();
 
     // --------------------------------------------------
-    // Read initial button states
+    // Initial button state
     // --------------------------------------------------
+
+#if BUTTONS_ENABLED
 
     right_last_state =
         digitalRead(
@@ -2412,15 +2439,17 @@ void tasks_init(void)
     select_last_change =
         millis();
 
+#endif
+
     // --------------------------------------------------
-    // Initialize timers
+    // Timers
     // --------------------------------------------------
 
     buzzer_timer =
         millis();
 
     // --------------------------------------------------
-    // Initialize buzzer dropdown
+    // Buzzer dropdown
     // --------------------------------------------------
 
     buzzer_dropdown_find();
@@ -2434,11 +2463,11 @@ void tasks_init(void)
     }
 
     // --------------------------------------------------
-    // Initialize status LED
+    // Status LED
     // --------------------------------------------------
 
-    
     led_bisect_style();
+
     if (objects.led_main != NULL)
     {
         led_apply_color(
@@ -2459,7 +2488,15 @@ void tasks_init(void)
         millis();
 
     // --------------------------------------------------
-    // Initialize menu focus
+    // UART Transfer Animation
+    // --------------------------------------------------
+
+    data_transfer_animation_init(
+        objects.main
+    );
+
+    // --------------------------------------------------
+    // Menu focus
     // --------------------------------------------------
 
     apply_settings_highlight();
@@ -2477,7 +2514,7 @@ void tasks_init(void)
         false;
 
     // --------------------------------------------------
-    // Reset GUI caches
+    // GUI caches
     // --------------------------------------------------
 
     gui_last_voltage_min =
@@ -2518,7 +2555,6 @@ void tasks_init(void)
 
     last_vc_edit_state =
         false;
-
 }
 
 // ==================================================
@@ -2527,22 +2563,40 @@ void tasks_init(void)
 
 void tasks_run(void)
 {
-    // Read physical buttons
+    // --------------------------------------------------
+    // Physical buttons
+    // --------------------------------------------------
+
     buttons_task();
 
-    // Receive UART data
+    // --------------------------------------------------
+    // UART
+    // --------------------------------------------------
+
     uart_task();
 
-    // Validate system conditions
+    // --------------------------------------------------
+    // Safety validation
+    // --------------------------------------------------
+
     safety_task();
 
-    // Control buzzer output
+    // --------------------------------------------------
+    // Buzzer
+    // --------------------------------------------------
+
     buzzer_task();
 
-    // Apply pending screen changes
+    // --------------------------------------------------
+    // Pending screen changes
+    // --------------------------------------------------
+
     screen_manager_process();
 
-    // Update user interface
-    // LED state and blinking are updated inside gui_task().
+    // --------------------------------------------------
+    // GUI
+    // LED + Animation are updated here
+    // --------------------------------------------------
+
     gui_task();
 }

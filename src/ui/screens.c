@@ -98,7 +98,7 @@ void create_screen_main() {
             // Voltage
             lv_obj_t *obj = lv_label_create(parent_obj);
             objects.voltage = obj;
-            lv_obj_set_pos(obj, 123, 76);
+            lv_obj_set_pos(obj, 123, 81);
             lv_obj_set_size(obj, LV_SIZE_CONTENT, LV_SIZE_CONTENT);
             lv_obj_set_style_text_color(obj, lv_color_hex(0xffffff), LV_PART_MAIN | LV_STATE_DEFAULT);
             lv_obj_set_style_text_font(obj, &lv_font_montserrat_14, LV_PART_MAIN | LV_STATE_DEFAULT);
@@ -181,6 +181,15 @@ void create_screen_main() {
                     lv_label_set_text(obj, "Text");
                 }
             }
+        }
+        {
+            // info_receive_text
+            lv_obj_t *obj = lv_label_create(parent_obj);
+            objects.info_receive_text = obj;
+            lv_obj_set_pos(obj, 216, 2);
+            lv_obj_set_size(obj, LV_SIZE_CONTENT, LV_SIZE_CONTENT);
+            lv_obj_set_style_text_color(obj, lv_color_hex(0xf6f6f6), LV_PART_MAIN | LV_STATE_DEFAULT);
+            lv_label_set_text_static(obj, "Text");
         }
     }
     
@@ -314,7 +323,7 @@ void create_screen_buzzer_settings() {
         lv_obj_t *parent_obj = obj;
         {
             lv_obj_t *obj = lv_dropdown_create(parent_obj);
-            objects.obj0 = obj;
+            objects.buzzer_drop_down_menu = obj;
             lv_obj_set_pos(obj, 85, 75);
             lv_obj_set_size(obj, 150, LV_SIZE_CONTENT);
             lv_dropdown_set_options_static(obj, "MODE 1\nMODE 2\nMODE 3");
@@ -358,12 +367,12 @@ void create_screen_buzzer_settings() {
 
 void tick_screen_buzzer_settings() {
     {
-        if (!(lv_obj_get_state(objects.obj0) & LV_STATE_EDITED)) {
+        if (!(lv_obj_get_state(objects.buzzer_drop_down_menu) & LV_STATE_EDITED)) {
             int32_t new_val = get_var_buzzer_mode();
-            int32_t cur_val = lv_dropdown_get_selected(objects.obj0);
+            int32_t cur_val = lv_dropdown_get_selected(objects.buzzer_drop_down_menu);
             if (new_val != cur_val) {
-                tick_value_change_obj = objects.obj0;
-                lv_dropdown_set_selected(objects.obj0, new_val);
+                tick_value_change_obj = objects.buzzer_drop_down_menu;
+                lv_dropdown_set_selected(objects.buzzer_drop_down_menu, new_val);
                 tick_value_change_obj = NULL;
             }
         }
