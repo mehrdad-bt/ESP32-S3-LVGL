@@ -4,6 +4,7 @@
 #include "SettingsPage.h"
 #include "screen_manager.h"
 #include "font_persian_16.h"
+#include "font_persian_14.h"
 #include "font_persian_24.h"
 
 extern "C"
@@ -71,6 +72,39 @@ static void configure_settings_labels(void)
             LV_STATE_DEFAULT
         );
     }
+
+
+    // --------------------------------------------------
+    // Update
+    // --------------------------------------------------
+
+    if (objects.update_text_setting != NULL)
+    {
+        lv_label_set_text(
+            objects.update_text_setting,
+            "آپدیت نرم افزار"
+        );
+
+        lv_obj_set_style_text_font(
+            objects.update_text_setting,
+            &font_persian_14,
+            LV_PART_MAIN |
+            LV_STATE_DEFAULT
+        );
+
+        lv_obj_set_style_base_dir(
+            objects.update_text_setting,
+            LV_BASE_DIR_RTL,
+            LV_PART_MAIN |
+            LV_STATE_DEFAULT
+        );
+    }
+
+
+
+
+
+
 
     // --------------------------------------------------
     // Buzzer
