@@ -1,52 +1,18 @@
+#include <Arduino.h>
+#include <lvgl.h>
+
 #include "Animation.h"
-#include "lvgl.h"
 
+// ==================================================
+// Waiting Dots
+// ==================================================
 
-/* ========================================================================== */
-/* WAITING DOTS                                                               */
-/* ========================================================================== */
-
-
-/* -------------------------------------------------------------------------- */
-/* Defines                                                                    */
-/* -------------------------------------------------------------------------- */
-
-#define WAITING_DOT_SIZE            8U
-#define WAITING_DOT_SPACING         6U
-#define WAITING_DOT_ANIM_TIME       700U
-#define WAITING_DOT_DELAY           250U
-
-
-/* -------------------------------------------------------------------------- */
-/* Waiting Dot Callback                                                       */
-/* -------------------------------------------------------------------------- */
-
-static void Waiting_Dot_Anim_Callback(
-    void *var,
-    int32_t value
-)
+static lv_obj_t *waiting_dots[3] =
 {
-    lv_obj_t *dot =
-        (lv_obj_t *)var;
-
-
-    if (dot == NULL)
-    {
-        return;
-    }
-
-
-    lv_obj_set_style_opa(
-        dot,
-        (lv_opa_t)value,
-        LV_PART_MAIN
-    );
-}
-
-
-/* -------------------------------------------------------------------------- */
-/* Create Waiting Dots                                                        */
-/* -------------------------------------------------------------------------- */
+    NULL,
+    NULL,
+    NULL
+};
 
 void Animation_CreateWaitingDots(
     lv_obj_t *parent,
@@ -59,200 +25,62 @@ void Animation_CreateWaitingDots(
         return;
     }
 
-
-    lv_obj_t *container =
-        lv_obj_create(parent);
-
-
-    if (container == NULL)
+    for (int i = 0; i < 3; i++)
     {
-        return;
-    }
+        if (waiting_dots[i] == NULL)
+        {
+            waiting_dots[i] =
+                lv_label_create(parent);
 
-
-    lv_obj_remove_style_all(
-        container
-    );
-
-
-    lv_obj_set_size(
-        container,
-        (3U * WAITING_DOT_SIZE) +
-        (2U * WAITING_DOT_SPACING),
-        WAITING_DOT_SIZE
-    );
-
-
-    lv_obj_set_pos(
-        container,
-        x,
-        y
-    );
-
-
-    for (
-        uint8_t i = 0U;
-        i < 3U;
-        i++
-    )
-    {
-        lv_obj_t *dot =
-            lv_obj_create(
-                container
+            lv_label_set_text(
+                waiting_dots[i],
+                "."
             );
 
+            lv_obj_set_style_text_color(
+                waiting_dots[i],
+                lv_color_hex(0xFFFFFF),
+                LV_PART_MAIN |
+                LV_STATE_DEFAULT
+            );
 
-        if (dot == NULL)
-        {
-            continue;
+            lv_obj_set_style_text_font(
+                waiting_dots[i],
+                LV_FONT_DEFAULT,
+                LV_PART_MAIN |
+                LV_STATE_DEFAULT
+            );
         }
 
-
-        lv_obj_remove_style_all(
-            dot
-        );
-
-
-        lv_obj_set_size(
-            dot,
-            WAITING_DOT_SIZE,
-            WAITING_DOT_SIZE
-        );
-
-
-        lv_obj_set_style_bg_color(
-            dot,
-            lv_color_hex(0xFFA500),
-            LV_PART_MAIN
-        );
-
-
-        lv_obj_set_style_bg_opa(
-            dot,
-            LV_OPA_COVER,
-            LV_PART_MAIN
-        );
-
-
-        lv_obj_set_style_radius(
-            dot,
-            LV_RADIUS_CIRCLE,
-            LV_PART_MAIN
-        );
-
-
         lv_obj_set_pos(
-            dot,
-            i * (
-                WAITING_DOT_SIZE +
-                WAITING_DOT_SPACING
-            ),
-            0
-        );
-
-
-        lv_anim_t anim;
-
-
-        lv_anim_init(
-            &anim
-        );
-
-
-        lv_anim_set_var(
-            &anim,
-            dot
-        );
-
-
-        lv_anim_set_values(
-            &anim,
-            40,
-            255
-        );
-
-
-        lv_anim_set_time(
-            &anim,
-            WAITING_DOT_ANIM_TIME
-        );
-
-
-        lv_anim_set_playback_time(
-            &anim,
-            WAITING_DOT_ANIM_TIME
-        );
-
-
-        lv_anim_set_exec_cb(
-            &anim,
-            Waiting_Dot_Anim_Callback
-        );
-
-
-        lv_anim_set_repeat_count(
-            &anim,
-            LV_ANIM_REPEAT_INFINITE
-        );
-
-
-        lv_anim_set_delay(
-            &anim,
-            i * WAITING_DOT_DELAY
-        );
-
-
-        lv_anim_set_path_cb(
-            &anim,
-            lv_anim_path_ease_in_out
-        );
-
-
-        lv_anim_start(
-            &anim
+            waiting_dots[i],
+            x + (i * 8),
+            y
         );
     }
 }
 
+// ==================================================
+// UART Transfer Animation
+// ==================================================
 
-/* ========================================================================== */
-/* DATA TRANSFER ANIMATION                                                    */
-/* ========================================================================== */
+#define TRANSFER_ARROW_COLOR     0x00FFFF
 
+#define TRANSFER_ARROW_WIDTH     18
+#define TRANSFER_ARROW_HEIGHT    22
 
-/* -------------------------------------------------------------------------- */
-/* Defines                                                                    */
-/* -------------------------------------------------------------------------- */
+#define TRANSFER_TX_X            270
+#define TRANSFER_RX_X            294
 
-/*
- * نمایشگر:
- *
- * 320 × 240
- *
- * موقعیت در گوشه بالا سمت راست
- */
+#define TRANSFER_TX_BASE_Y       5
+#define TRANSFER_RX_BASE_Y       5
 
-#define ARROW_COLOR             0x0080FF
+#define TRANSFER_MOVE_PIXELS     5
+#define TRANSFER_PERIOD_MS       700
 
-#define ARROW_WIDTH             22
-#define ARROW_HEIGHT            24
-
-#define TX_X                    270
-#define TX_Y                    4
-
-#define RX_X                    294
-#define RX_Y                    4
-
-#define MOVE_DISTANCE           7
-
-#define ANIM_TIME               500
-
-#define ARROW_LINE_WIDTH        4
-
-
-/* -------------------------------------------------------------------------- */
-/* Arrow Objects                                                              */
-/* -------------------------------------------------------------------------- */
+// ==================================================
+// Arrow Objects
+// ==================================================
 
 static lv_obj_t *tx_arrow =
     NULL;
@@ -260,461 +88,188 @@ static lv_obj_t *tx_arrow =
 static lv_obj_t *rx_arrow =
     NULL;
 
+// ==================================================
+// Arrow Points
+// ==================================================
 
-/* -------------------------------------------------------------------------- */
-/* Arrow Lines                                                                */
-/* -------------------------------------------------------------------------- */
+static lv_point_t tx_points[5] =
+{
+    { 9, 21 },
+    { 9, 5  },
+    { 3, 11 },
+    { 9, 5  },
+    { 15, 11 }
+};
 
-static lv_obj_t *tx_line_vertical =
-    NULL;
+static lv_point_t rx_points[5] =
+{
+    { 9, 1  },
+    { 9, 17 },
+    { 3, 11 },
+    { 9, 17 },
+    { 15, 11 }
+};
 
-static lv_obj_t *tx_line_left =
-    NULL;
+// ==================================================
+// Runtime State
+// ==================================================
 
-static lv_obj_t *tx_line_right =
-    NULL;
-
-
-static lv_obj_t *rx_line_vertical =
-    NULL;
-
-static lv_obj_t *rx_line_left =
-    NULL;
-
-static lv_obj_t *rx_line_right =
-    NULL;
-
-
-/* -------------------------------------------------------------------------- */
-/* Animation State                                                            */
-/* -------------------------------------------------------------------------- */
-
-static bool data_animation_created =
+static bool animation_initialized =
     false;
 
-static bool data_animation_running =
+static bool animation_active =
     false;
 
+static uint32_t animation_start_time =
+    0;
 
-/* -------------------------------------------------------------------------- */
-/* Create Line                                                                */
-/* -------------------------------------------------------------------------- */
+// ==================================================
+// Configure Arrow
+// ==================================================
 
-static lv_obj_t *create_line(
-    lv_obj_t *parent,
-    lv_point_t *points,
-    uint16_t point_count
+static void configure_arrow(
+    lv_obj_t *arrow,
+    lv_point_t *points
 )
 {
-    if (parent == NULL)
+    if (arrow == NULL)
     {
-        return NULL;
+        return;
     }
 
-
-    lv_obj_t *line =
-        lv_line_create(
-            parent
-        );
-
-
-    if (line == NULL)
-    {
-        return NULL;
-    }
-
-
-    lv_line_set_points(
-        line,
-        points,
-        point_count
+    lv_obj_set_size(
+        arrow,
+        TRANSFER_ARROW_WIDTH,
+        TRANSFER_ARROW_HEIGHT
     );
 
+    lv_line_set_points(
+        arrow,
+        points,
+        5
+    );
 
     lv_obj_set_style_line_color(
-        line,
+        arrow,
         lv_color_hex(
-            ARROW_COLOR
+            TRANSFER_ARROW_COLOR
         ),
         LV_PART_MAIN |
         LV_STATE_DEFAULT
     );
 
-
     lv_obj_set_style_line_width(
-        line,
-        ARROW_LINE_WIDTH,
+        arrow,
+        3,
         LV_PART_MAIN |
         LV_STATE_DEFAULT
     );
 
-
     lv_obj_set_style_line_rounded(
-        line,
+        arrow,
         true,
         LV_PART_MAIN |
         LV_STATE_DEFAULT
     );
 
+    lv_obj_clear_flag(
+        arrow,
+        LV_OBJ_FLAG_CLICKABLE
+    );
 
-    return line;
-}
+    lv_obj_clear_flag(
+        arrow,
+        LV_OBJ_FLAG_SCROLLABLE
+    );
 
-
-/* -------------------------------------------------------------------------- */
-/* TX Animation Callback                                                      */
-/* -------------------------------------------------------------------------- */
-
-static void tx_animation_callback(
-    void *var,
-    int32_t value
-)
-{
-    lv_obj_t *obj =
-        (lv_obj_t *)var;
-
-
-    if (obj == NULL)
-    {
-        return;
-    }
-
-
-    lv_obj_set_y(
-        obj,
-        (lv_coord_t)value
+    lv_obj_add_flag(
+        arrow,
+        LV_OBJ_FLAG_HIDDEN
     );
 }
 
+// ==================================================
+// Initialization
+// ==================================================
 
-/* -------------------------------------------------------------------------- */
-/* RX Animation Callback                                                      */
-/* -------------------------------------------------------------------------- */
-
-static void rx_animation_callback(
-    void *var,
-    int32_t value
-)
-{
-    lv_obj_t *obj =
-        (lv_obj_t *)var;
-
-
-    if (obj == NULL)
-    {
-        return;
-    }
-
-
-    lv_obj_set_y(
-        obj,
-        (lv_coord_t)value
-    );
-}
-
-
-/* -------------------------------------------------------------------------- */
-/* Create Data Transfer Objects                                               */
-/* -------------------------------------------------------------------------- */
-
-static void create_data_transfer_objects(
+void data_transfer_animation_init(
     lv_obj_t *parent
 )
 {
+    if (animation_initialized)
+    {
+        return;
+    }
+
     if (parent == NULL)
     {
         return;
     }
 
-
-    if (data_animation_created)
-    {
-        return;
-    }
-
-
-    /* ====================================================================== */
-    /* TX                                                                      */
-    /* ====================================================================== */
+    // --------------------------------------------------
+    // TX Arrow
+    // --------------------------------------------------
 
     tx_arrow =
-        lv_obj_create(
-            parent
+        lv_line_create(parent);
+
+    if (tx_arrow != NULL)
+    {
+        configure_arrow(
+            tx_arrow,
+            tx_points
         );
 
-
-    if (tx_arrow == NULL)
-    {
-        return;
+        lv_obj_set_pos(
+            tx_arrow,
+            TRANSFER_TX_X,
+            TRANSFER_TX_BASE_Y
+        );
     }
 
-
-    lv_obj_set_size(
-        tx_arrow,
-        ARROW_WIDTH,
-        ARROW_HEIGHT
-    );
-
-
-    lv_obj_set_pos(
-        tx_arrow,
-        TX_X,
-        TX_Y
-    );
-
-
-    lv_obj_set_style_bg_opa(
-        tx_arrow,
-        LV_OPA_TRANSP,
-        LV_PART_MAIN |
-        LV_STATE_DEFAULT
-    );
-
-
-    lv_obj_set_style_border_width(
-        tx_arrow,
-        0,
-        LV_PART_MAIN |
-        LV_STATE_DEFAULT
-    );
-
-
-    lv_obj_set_style_pad_all(
-        tx_arrow,
-        0,
-        LV_PART_MAIN |
-        LV_STATE_DEFAULT
-    );
-
-
-    lv_obj_set_style_shadow_width(
-        tx_arrow,
-        0,
-        LV_PART_MAIN |
-        LV_STATE_DEFAULT
-    );
-
-
-    static lv_point_t tx_vertical_points[] =
-    {
-        {11, 20},
-        {11, 5}
-    };
-
-
-    tx_line_vertical =
-        create_line(
-            tx_arrow,
-            tx_vertical_points,
-            2
-        );
-
-
-    static lv_point_t tx_left_points[] =
-    {
-        {11, 4},
-        {5, 10}
-    };
-
-
-    tx_line_left =
-        create_line(
-            tx_arrow,
-            tx_left_points,
-            2
-        );
-
-
-    static lv_point_t tx_right_points[] =
-    {
-        {11, 4},
-        {17, 10}
-    };
-
-
-    tx_line_right =
-        create_line(
-            tx_arrow,
-            tx_right_points,
-            2
-        );
-
-
-    /* ====================================================================== */
-    /* RX                                                                      */
-    /* ====================================================================== */
+    // --------------------------------------------------
+    // RX Arrow
+    // --------------------------------------------------
 
     rx_arrow =
-        lv_obj_create(
-            parent
-        );
+        lv_line_create(parent);
 
-
-    if (rx_arrow == NULL)
+    if (rx_arrow != NULL)
     {
-        lv_obj_del(
-            tx_arrow
+        configure_arrow(
+            rx_arrow,
+            rx_points
         );
 
-        tx_arrow =
-            NULL;
-
-        tx_line_vertical =
-            NULL;
-
-        tx_line_left =
-            NULL;
-
-        tx_line_right =
-            NULL;
-
-        return;
+        lv_obj_set_pos(
+            rx_arrow,
+            TRANSFER_RX_X,
+            TRANSFER_RX_BASE_Y
+        );
     }
 
-
-    lv_obj_set_size(
-        rx_arrow,
-        ARROW_WIDTH,
-        ARROW_HEIGHT
-    );
-
-
-    lv_obj_set_pos(
-        rx_arrow,
-        RX_X,
-        RX_Y
-    );
-
-
-    lv_obj_set_style_bg_opa(
-        rx_arrow,
-        LV_OPA_TRANSP,
-        LV_PART_MAIN |
-        LV_STATE_DEFAULT
-    );
-
-
-    lv_obj_set_style_border_width(
-        rx_arrow,
-        0,
-        LV_PART_MAIN |
-        LV_STATE_DEFAULT
-    );
-
-
-    lv_obj_set_style_pad_all(
-        rx_arrow,
-        0,
-        LV_PART_MAIN |
-        LV_STATE_DEFAULT
-    );
-
-
-    lv_obj_set_style_shadow_width(
-        rx_arrow,
-        0,
-        LV_PART_MAIN |
-        LV_STATE_DEFAULT
-    );
-
-
-    static lv_point_t rx_vertical_points[] =
-    {
-        {11, 4},
-        {11, 19}
-    };
-
-
-    rx_line_vertical =
-        create_line(
-            rx_arrow,
-            rx_vertical_points,
-            2
-        );
-
-
-    static lv_point_t rx_left_points[] =
-    {
-        {11, 20},
-        {5, 14}
-    };
-
-
-    rx_line_left =
-        create_line(
-            rx_arrow,
-            rx_left_points,
-            2
-        );
-
-
-    static lv_point_t rx_right_points[] =
-    {
-        {11, 20},
-        {17, 14}
-    };
-
-
-    rx_line_right =
-        create_line(
-            rx_arrow,
-            rx_right_points,
-            2
-        );
-
-
-    /*
-     * هر دو فلش در ابتدا مخفی هستند.
-     */
-
-    lv_obj_add_flag(
-        tx_arrow,
-        LV_OBJ_FLAG_HIDDEN
-    );
-
-
-    lv_obj_add_flag(
-        rx_arrow,
-        LV_OBJ_FLAG_HIDDEN
-    );
-
-
-    data_animation_created =
-        true;
-
-    data_animation_running =
+    animation_active =
         false;
+
+    animation_start_time =
+        millis();
+
+    animation_initialized =
+        true;
 }
 
+// ==================================================
+// Start
+// ==================================================
 
-/* -------------------------------------------------------------------------- */
-/* Start Data Transfer Animation                                              */
-/* -------------------------------------------------------------------------- */
-
-void data_transfer_animation_start(
-    lv_obj_t *parent
-)
+void data_transfer_animation_start(void)
 {
-    if (parent == NULL)
+    if (!animation_initialized)
     {
         return;
     }
 
-
-    /*
-     * فقط یک بار آبجکت‌ها را ایجاد کن.
-     */
-
-    if (!data_animation_created)
-    {
-        create_data_transfer_objects(
-            parent
-        );
-    }
-
-
     if (
-        !data_animation_created ||
         tx_arrow == NULL ||
         rx_arrow == NULL
     )
@@ -722,298 +277,212 @@ void data_transfer_animation_start(
         return;
     }
 
-
-    /*
-     * اگر انیمیشن قبلاً در حال اجراست،
-     * دوباره ایجادش نکن.
-     */
-
-    if (data_animation_running)
+    if (!animation_active)
     {
-        /*
-         * مطمئن شو آبجکت‌ها مخفی نشده‌اند.
-         */
-
-        lv_obj_clear_flag(
-            tx_arrow,
-            LV_OBJ_FLAG_HIDDEN
-        );
-
-
-        lv_obj_clear_flag(
-            rx_arrow,
-            LV_OBJ_FLAG_HIDDEN
-        );
-
-
-        return;
+        animation_start_time =
+            millis();
     }
 
-
-    /*
-     * نمایش فلش‌ها
-     */
-
-    lv_obj_clear_flag(
-        tx_arrow,
-        LV_OBJ_FLAG_HIDDEN
-    );
-
-
-    lv_obj_clear_flag(
-        rx_arrow,
-        LV_OBJ_FLAG_HIDDEN
-    );
-
-
-    /*
-     * حذف هر animation قبلی
-     */
-
-    lv_anim_del(
-        tx_arrow,
-        NULL
-    );
-
-
-    lv_anim_del(
-        rx_arrow,
-        NULL
-    );
-
-
-    /*
-     * قرار دادن فلش در موقعیت اولیه
-     */
-
-    lv_obj_set_y(
-        tx_arrow,
-        TX_Y
-    );
-
-
-    lv_obj_set_y(
-        rx_arrow,
-        RX_Y
-    );
-
-
-    /* ====================================================================== */
-    /* TX                                                                       */
-    /* ====================================================================== */
-
-    lv_anim_t tx_anim;
-
-
-    lv_anim_init(
-        &tx_anim
-    );
-
-
-    lv_anim_set_var(
-        &tx_anim,
-        tx_arrow
-    );
-
-
-    lv_anim_set_exec_cb(
-        &tx_anim,
-        tx_animation_callback
-    );
-
-
-    lv_anim_set_values(
-        &tx_anim,
-        TX_Y + MOVE_DISTANCE,
-        TX_Y
-    );
-
-
-    lv_anim_set_time(
-        &tx_anim,
-        ANIM_TIME
-    );
-
-
-    lv_anim_set_playback_time(
-        &tx_anim,
-        ANIM_TIME
-    );
-
-
-    lv_anim_set_repeat_count(
-        &tx_anim,
-        LV_ANIM_REPEAT_INFINITE
-    );
-
-
-    lv_anim_set_path_cb(
-        &tx_anim,
-        lv_anim_path_ease_in_out
-    );
-
-
-    lv_anim_start(
-        &tx_anim
-    );
-
-
-    /* ====================================================================== */
-    /* RX                                                                       */
-    /* ====================================================================== */
-
-    lv_anim_t rx_anim;
-
-
-    lv_anim_init(
-        &rx_anim
-    );
-
-
-    lv_anim_set_var(
-        &rx_anim,
-        rx_arrow
-    );
-
-
-    lv_anim_set_exec_cb(
-        &rx_anim,
-        rx_animation_callback
-    );
-
-
-    lv_anim_set_values(
-        &rx_anim,
-        RX_Y,
-        RX_Y + MOVE_DISTANCE
-    );
-
-
-    lv_anim_set_time(
-        &rx_anim,
-        ANIM_TIME
-    );
-
-
-    lv_anim_set_playback_time(
-        &rx_anim,
-        ANIM_TIME
-    );
-
-
-    lv_anim_set_repeat_count(
-        &rx_anim,
-        LV_ANIM_REPEAT_INFINITE
-    );
-
-
-    lv_anim_set_path_cb(
-        &rx_anim,
-        lv_anim_path_ease_in_out
-    );
-
-
-    lv_anim_set_delay(
-        &rx_anim,
-        250
-    );
-
-
-    lv_anim_start(
-        &rx_anim
-    );
-
-
-    data_animation_running =
+    animation_active =
         true;
+
+    lv_obj_clear_flag(
+        tx_arrow,
+        LV_OBJ_FLAG_HIDDEN
+    );
+
+    lv_obj_clear_flag(
+        rx_arrow,
+        LV_OBJ_FLAG_HIDDEN
+    );
 }
 
+// ==================================================
+// Stop
+// ==================================================
 
-/* -------------------------------------------------------------------------- */
-/* Stop Data Transfer Animation                                               */
-/* -------------------------------------------------------------------------- */
-
-void data_transfer_animation_stop(
-    void
-)
+void data_transfer_animation_stop(void)
 {
-    /*
-     * اگر اصلاً ساخته نشده،
-     * کاری نکن.
-     */
-
-    if (!data_animation_created)
+    if (!animation_initialized)
     {
         return;
     }
 
-
-    /*
-     * حذف animationها
-     *
-     * اما آبجکت‌ها را حذف نمی‌کنیم.
-     */
+    animation_active =
+        false;
 
     if (tx_arrow != NULL)
     {
-        lv_anim_del(
-            tx_arrow,
-            NULL
-        );
-
-
         lv_obj_add_flag(
             tx_arrow,
             LV_OBJ_FLAG_HIDDEN
         );
-    }
 
+        lv_obj_set_pos(
+            tx_arrow,
+            TRANSFER_TX_X,
+            TRANSFER_TX_BASE_Y
+        );
+    }
 
     if (rx_arrow != NULL)
     {
-        lv_anim_del(
-            rx_arrow,
-            NULL
-        );
-
-
         lv_obj_add_flag(
             rx_arrow,
             LV_OBJ_FLAG_HIDDEN
         );
+
+        lv_obj_set_pos(
+            rx_arrow,
+            TRANSFER_RX_X,
+            TRANSFER_RX_BASE_Y
+        );
     }
-
-
-    data_animation_running =
-        false;
 }
 
+// ==================================================
+// Reset
+// ==================================================
 
-/* -------------------------------------------------------------------------- */
-/* Optional Reset                                                             */
-/* -------------------------------------------------------------------------- */
-
-void data_transfer_animation_reset(
-    void
-)
+void data_transfer_animation_reset(void)
 {
-    data_transfer_animation_stop();
+    if (!animation_initialized)
+    {
+        return;
+    }
 
+    animation_active =
+        false;
+
+    animation_start_time =
+        millis();
 
     if (tx_arrow != NULL)
     {
-        lv_obj_set_y(
+        lv_obj_add_flag(
             tx_arrow,
-            TX_Y
+            LV_OBJ_FLAG_HIDDEN
+        );
+
+        lv_obj_set_pos(
+            tx_arrow,
+            TRANSFER_TX_X,
+            TRANSFER_TX_BASE_Y
         );
     }
-
 
     if (rx_arrow != NULL)
     {
-        lv_obj_set_y(
+        lv_obj_add_flag(
             rx_arrow,
-            RX_Y
+            LV_OBJ_FLAG_HIDDEN
+        );
+
+        lv_obj_set_pos(
+            rx_arrow,
+            TRANSFER_RX_X,
+            TRANSFER_RX_BASE_Y
         );
     }
+}
+
+// ==================================================
+// Get Animation State
+// ==================================================
+
+bool data_transfer_animation_is_active(void)
+{
+    return animation_active;
+}
+
+// ==================================================
+// Calculate Movement
+// ==================================================
+
+static int32_t get_transfer_offset(
+    uint32_t elapsed
+)
+{
+    uint32_t phase =
+        elapsed %
+        TRANSFER_PERIOD_MS;
+
+    uint32_t half_period =
+        TRANSFER_PERIOD_MS /
+        2;
+
+    if (phase < half_period)
+    {
+        return
+            (
+                (int32_t)(
+                    phase *
+                    TRANSFER_MOVE_PIXELS
+                )
+                /
+                (int32_t)half_period
+            );
+    }
+
+    return
+        (
+            (int32_t)(
+                (TRANSFER_PERIOD_MS - phase) *
+                TRANSFER_MOVE_PIXELS
+            )
+            /
+            (int32_t)half_period
+        );
+}
+
+// ==================================================
+// Update
+// ==================================================
+
+void data_transfer_animation_update(
+    uint32_t now
+)
+{
+    if (!animation_initialized)
+    {
+        return;
+    }
+
+    if (!animation_active)
+    {
+        return;
+    }
+
+    if (
+        tx_arrow == NULL ||
+        rx_arrow == NULL
+    )
+    {
+        return;
+    }
+
+    uint32_t elapsed =
+        now -
+        animation_start_time;
+
+    int32_t offset =
+        get_transfer_offset(
+            elapsed
+        );
+
+    // TX: upward
+
+    lv_obj_set_y(
+        tx_arrow,
+        TRANSFER_TX_BASE_Y -
+        offset
+    );
+
+    // RX: downward
+
+    lv_obj_set_y(
+        rx_arrow,
+        TRANSFER_RX_BASE_Y +
+        offset
+    );
 }
