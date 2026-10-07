@@ -21,6 +21,7 @@ extern lv_obj_t *tick_value_change_obj;
 #include "BuzzerPage.h"
 #include "VCRangePage.h"
 #include "Animation.h"
+#include "UpdatePage.h"
 
 // ==================================================
 // Hardware Configuration
@@ -2593,6 +2594,7 @@ void tasks_run(void)
 
     screen_manager_process();
 
+    update_page_process();
     // --------------------------------------------------
     // GUI
     // LED + Animation are updated here

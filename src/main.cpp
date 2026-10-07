@@ -21,6 +21,7 @@ extern "C"
 #include "SettingsPage.h"
 #include "BuzzerPage.h"
 #include "VCRangePage.h"
+#include "UsbHost.h"
 
 // ==================================================
 // Configuration
@@ -45,12 +46,9 @@ extern "C"
 // UART Debug Configuration
 // ==================================================
 
-// UART device is connected to Serial1.
-// Change these two GPIO numbers to the actual RX/TX pins
-// of your ESP32-S3 board if they are different.
-#define UART_RX_PIN           44
-#define UART_TX_PIN           43
-#define UART_BAUDRATE         115200
+#define UART_RX_PIN            18
+#define UART_TX_PIN            17
+#define UART_BAUDRATE          115200
 #define UART_DEBUG_INTERVAL_MS 1000
 
 // ==================================================
@@ -108,41 +106,39 @@ static uint16_t calData[5] =
 };
 
 // ==================================================
-// Watchdog
+// Watchdog (ESP-IDF 5 / Arduino core 3.x API)
 // ==================================================
 
 static void watchdog_init(void)
 {
-    Serial.println(
-        "[DBG][WDT] init"
-    );
+    Serial.println("[DBG][WDT] init");
 
-    esp_err_t result =
-        esp_task_wdt_init(
-            WDT_TIMEOUT_SECONDS,
-            true
-        );
+    esp_task_wdt_config_t cfg = {};
+    cfg.timeout_ms     = WDT_TIMEOUT_SECONDS * 1000;
+    cfg.idle_core_mask = 0;
+    cfg.trigger_panic  = true;
+
+    // The Arduino core may already have initialised the TWDT
+    esp_err_t result = esp_task_wdt_reconfigure(&cfg);
+
+    if (result == ESP_ERR_INVALID_STATE)
+    {
+        result = esp_task_wdt_init(&cfg);
+    }
 
     if (result != ESP_OK)
     {
-        Serial.printf(
-            "[DBG][WDT] init result=%d\n",
-            (int)result
-        );
+        Serial.printf("[DBG][WDT] init result=%d\n", (int)result);
     }
 
-    esp_err_t add_result =
-        esp_task_wdt_add(NULL);
+    esp_err_t add_result = esp_task_wdt_add(NULL);
 
     if (
         add_result != ESP_OK &&
         add_result != ESP_ERR_INVALID_STATE
     )
     {
-        Serial.printf(
-            "[DBG][WDT] add result=%d\n",
-            (int)add_result
-        );
+        Serial.printf("[DBG][WDT] add result=%d\n", (int)add_result);
     }
 
     Serial.printf(
@@ -150,10 +146,6 @@ static void watchdog_init(void)
         WDT_TIMEOUT_SECONDS
     );
 }
-
-// ==================================================
-// Watchdog Feed
-// ==================================================
 
 static inline void watchdog_feed(void)
 {
@@ -179,23 +171,11 @@ void debug_runtime(
 
     va_list args;
 
-    va_start(
-        args,
-        format
-    );
-
-    vsnprintf(
-        buffer,
-        sizeof(buffer),
-        format,
-        args
-    );
-
+    va_start(args, format);
+    vsnprintf(buffer, sizeof(buffer), format, args);
     va_end(args);
 
-    Serial.print(
-        buffer
-    );
+    Serial.print(buffer);
 }
 
 // ==================================================
@@ -247,23 +227,14 @@ static void my_disp_flush(
     {
         if (disp != NULL)
         {
-            lv_disp_flush_ready(
-                disp
-            );
+            lv_disp_flush_ready(disp);
         }
 
         return;
     }
 
-    uint32_t w =
-        area->x2 -
-        area->x1 +
-        1;
-
-    uint32_t h =
-        area->y2 -
-        area->y1 +
-        1;
+    uint32_t w = area->x2 - area->x1 + 1;
+    uint32_t h = area->y2 - area->y1 + 1;
 
     // No Serial logging inside flush().
 
@@ -277,18 +248,14 @@ static void my_disp_flush(
     );
 
     tft.pushColors(
-        reinterpret_cast<uint16_t *>(
-            &color_p->full
-        ),
+        reinterpret_cast<uint16_t *>(&color_p->full),
         w * h,
         true
     );
 
     tft.endWrite();
 
-    lv_disp_flush_ready(
-        disp
-    );
+    lv_disp_flush_ready(disp);
 }
 
 // ==================================================
@@ -306,27 +273,18 @@ static void my_touchpad_read(
     uint16_t y = 0;
 
     bool touched =
-        tft.getTouch(
-            &x,
-            &y
-        );
+        tft.getTouch(&x, &y);
 
     if (!touched)
     {
-        data->state =
-            LV_INDEV_STATE_REL;
-
+        data->state = LV_INDEV_STATE_REL;
         return;
     }
 
-    data->state =
-        LV_INDEV_STATE_PR;
+    data->state = LV_INDEV_STATE_PR;
 
-    data->point.x =
-        x;
-
-    data->point.y =
-        y;
+    data->point.x = x;
+    data->point.y = y;
 }
 
 // ==================================================
@@ -339,31 +297,19 @@ static void lvgl_display_init(void)
         &draw_buf,
         buf1,
         buf2,
-        SCREEN_WIDTH *
-        LVGL_BUF_LINES
+        SCREEN_WIDTH * LVGL_BUF_LINES
     );
 
     static lv_disp_drv_t disp_drv;
 
-    lv_disp_drv_init(
-        &disp_drv
-    );
+    lv_disp_drv_init(&disp_drv);
 
-    disp_drv.hor_res =
-        SCREEN_WIDTH;
+    disp_drv.hor_res  = SCREEN_WIDTH;
+    disp_drv.ver_res  = SCREEN_HEIGHT;
+    disp_drv.flush_cb = my_disp_flush;
+    disp_drv.draw_buf = &draw_buf;
 
-    disp_drv.ver_res =
-        SCREEN_HEIGHT;
-
-    disp_drv.flush_cb =
-        my_disp_flush;
-
-    disp_drv.draw_buf =
-        &draw_buf;
-
-    lv_disp_drv_register(
-        &disp_drv
-    );
+    lv_disp_drv_register(&disp_drv);
 }
 
 // ==================================================
@@ -372,25 +318,16 @@ static void lvgl_display_init(void)
 
 static void lvgl_touch_init(void)
 {
-    tft.setTouch(
-        calData
-    );
+    tft.setTouch(calData);
 
     static lv_indev_drv_t indev_drv;
 
-    lv_indev_drv_init(
-        &indev_drv
-    );
+    lv_indev_drv_init(&indev_drv);
 
-    indev_drv.type =
-        LV_INDEV_TYPE_POINTER;
+    indev_drv.type    = LV_INDEV_TYPE_POINTER;
+    indev_drv.read_cb = my_touchpad_read;
 
-    indev_drv.read_cb =
-        my_touchpad_read;
-
-    lv_indev_drv_register(
-        &indev_drv
-    );
+    lv_indev_drv_register(&indev_drv);
 }
 
 // ==================================================
@@ -401,22 +338,16 @@ static void debug_uart_rx(void)
 {
     static uint32_t last_debug_time = 0;
 
-    uint32_t now =
-        millis();
+    uint32_t now = millis();
 
-    int available =
-        Serial1.available();
+    int available = Serial1.available();
 
-    // --------------------------------------------------
-    // A byte is waiting in Serial1 RX buffer.
     // peek() does NOT consume the byte, so uart_receive()
     // inside tasks_run() can still process it normally.
-    // --------------------------------------------------
 
     if (available > 0)
     {
-        int first_byte =
-            Serial1.peek();
+        int first_byte = Serial1.peek();
 
         Serial.printf(
             "[UART DEBUG] RX DATA available=%d first=0x%02X",
@@ -431,10 +362,7 @@ static void debug_uart_rx(void)
             first_byte <= 126
         )
         {
-            Serial.printf(
-                " ('%c')",
-                (char)first_byte
-            );
+            Serial.printf(" ('%c')", (char)first_byte);
         }
 
         Serial.println();
@@ -444,12 +372,9 @@ static void debug_uart_rx(void)
         UART_DEBUG_INTERVAL_MS
     )
     {
-        last_debug_time =
-            now;
+        last_debug_time = now;
 
-        Serial.println(
-            "[UART DEBUG] RX buffer empty"
-        );
+        Serial.println("[UART DEBUG] RX buffer empty");
     }
 }
 
@@ -459,83 +384,58 @@ static void debug_uart_rx(void)
 
 void setup(void)
 {
-    Serial.begin(
-        115200
-    );
 
-    // --------------------------------------------------
-    // UART1
-    // --------------------------------------------------
-    // Serial is kept for the USB/serial monitor.
-    // Serial1 is the external UART connected to the device.
+    Serial0.begin(115200);
+    delay(1000);
+    Serial0.println("BOOT TEST");
 
-    Serial1.begin(
-        UART_BAUDRATE,
-        SERIAL_8N1,
-        UART_RX_PIN,
-        UART_TX_PIN
-    );
+    
 
-    Serial.println(
-        "[UART DEBUG] Serial1 initialized"
-    );
+    // Serial  = USB/serial monitor (CH340)
+    // Serial1 = external UART connected to the device
 
-    Serial.printf(
-        "[UART DEBUG] RX=GPIO%d TX=GPIO%d BAUD=%d\n",
-        UART_RX_PIN,
-        UART_TX_PIN,
-        UART_BAUDRATE
-    );
+    // Serial1.begin(
+    //     UART_BAUDRATE,
+    //     SERIAL_8N1,
+    //     UART_RX_PIN,
+    //     UART_TX_PIN
+    // );
+
+    // Serial.println("[UART DEBUG] Serial1 initialized");
+
+    // Serial.printf(
+    //     "[UART DEBUG] RX=GPIO%d TX=GPIO%d BAUD=%d\n",
+    //     UART_RX_PIN,
+    //     UART_TX_PIN,
+    //     UART_BAUDRATE
+    // );
 
     delay(200);
 
     Serial.println();
-
-    Serial.println(
-        "================================"
-    );
-
-    Serial.println(
-        "ESP32 LVGL Application Starting"
-    );
-
-    Serial.println(
-        "================================"
-    );
+    Serial.println("================================");
+    Serial.println("ESP32 LVGL Application Starting");
+    Serial.println("================================");
 
     // --------------------------------------------------
     // Reset Reason
     // --------------------------------------------------
 
-    esp_reset_reason_t reset_reason =
-        esp_reset_reason();
+    esp_reset_reason_t reset_reason = esp_reset_reason();
 
-    const char *reason_text =
-        "OTHER";
+    const char *reason_text = "OTHER";
 
-    if (
-        reset_reason ==
-        ESP_RST_POWERON
-    )
+    if (reset_reason == ESP_RST_POWERON)
     {
-        reason_text =
-            "POWER_ON";
+        reason_text = "POWER_ON";
     }
-    else if (
-        reset_reason ==
-        ESP_RST_TASK_WDT
-    )
+    else if (reset_reason == ESP_RST_TASK_WDT)
     {
-        reason_text =
-            "TASK_WDT";
+        reason_text = "TASK_WDT";
     }
-    else if (
-        reset_reason ==
-        ESP_RST_SW
-    )
+    else if (reset_reason == ESP_RST_SW)
     {
-        reason_text =
-            "SOFTWARE";
+        reason_text = "SOFTWARE";
     }
 
     Serial.printf(
@@ -548,35 +448,21 @@ void setup(void)
     // Previous RTC Phase
     // --------------------------------------------------
 
-    if (
-        debug_rtc_magic ==
-        DEBUG_RTC_MAGIC
-    )
+    if (debug_rtc_magic == DEBUG_RTC_MAGIC)
     {
         Serial.printf(
             "[DBG][CRASH] previous phase=%lu (%s)\n",
             (unsigned long)debug_last_phase,
-            phase_name(
-                debug_last_phase
-            )
+            phase_name(debug_last_phase)
         );
     }
     else
     {
-        Serial.println(
-            "[DBG][CRASH] previous phase=INVALID"
-        );
+        Serial.println("[DBG][CRASH] previous phase=INVALID");
     }
 
-    // --------------------------------------------------
-    // Prepare RTC Marker
-    // --------------------------------------------------
-
-    debug_rtc_magic =
-        DEBUG_RTC_MAGIC;
-
-    debug_last_phase =
-        PHASE_NONE;
+    debug_rtc_magic  = DEBUG_RTC_MAGIC;
+    debug_last_phase = PHASE_NONE;
 
     // --------------------------------------------------
     // Watchdog
@@ -588,100 +474,71 @@ void setup(void)
     // TFT
     // --------------------------------------------------
 
-    Serial.println(
-        "[DBG][MAIN] TFT init BEGIN"
-    );
+    Serial.println("[DBG][MAIN] TFT init BEGIN");
 
     tft.begin();
+    tft.setRotation(1);
 
-    tft.setRotation(
-        1
-    );
-
-    Serial.println(
-        "[DBG][MAIN] TFT init END"
-    );
+    Serial.println("[DBG][MAIN] TFT init END");
 
     // --------------------------------------------------
     // LVGL
     // --------------------------------------------------
 
-    Serial.println(
-        "[DBG][MAIN] lv_init BEGIN"
-    );
+    Serial.println("[DBG][MAIN] lv_init BEGIN");
 
     lv_init();
 
-    Serial.println(
-        "[DBG][MAIN] lv_init END"
-    );
-
-    // --------------------------------------------------
-    // LVGL Display
-    // --------------------------------------------------
+    Serial.println("[DBG][MAIN] lv_init END");
 
     lvgl_display_init();
-
-    // --------------------------------------------------
-    // LVGL Touch
-    // --------------------------------------------------
-
     lvgl_touch_init();
 
     // --------------------------------------------------
     // EEZ UI
     // --------------------------------------------------
 
-    Serial.println(
-        "[DBG][MAIN] ui_init BEGIN"
-    );
+    Serial.println("[DBG][MAIN] ui_init BEGIN");
 
     ui_init();
 
-    Serial.println(
-        "[DBG][MAIN] ui_init END"
-    );
+    Serial.println("[DBG][MAIN] ui_init END");
 
     // --------------------------------------------------
     // Screen Manager
     // --------------------------------------------------
 
-    Serial.println(
-        "[DBG][MAIN] screen_manager_init BEGIN"
-    );
+    Serial.println("[DBG][MAIN] screen_manager_init BEGIN");
 
     screen_manager_init();
 
-    Serial.println(
-        "[DBG][MAIN] screen_manager_init END"
-    );
+    Serial.println("[DBG][MAIN] screen_manager_init END");
 
     // --------------------------------------------------
     // Tasks
     // --------------------------------------------------
 
-    Serial.println(
-        "[DBG][MAIN] tasks_init BEGIN"
-    );
+    Serial.println("[DBG][MAIN] tasks_init BEGIN");
 
     tasks_init();
 
-    Serial.println(
-        "[DBG][MAIN] tasks_init END"
-    );
+    Serial.println("[DBG][MAIN] tasks_init END");
+
+    // --------------------------------------------------
+    // USB Host (flash drive)
+    // --------------------------------------------------
+
+    Serial.println("[DBG][MAIN] usb_msc_start BEGIN");
+
+    usb_msc_start();
+
+    Serial.println("[DBG][MAIN] usb_msc_start END");
 
     // --------------------------------------------------
     // Initial Watchdog Feed
     // --------------------------------------------------
 
     watchdog_feed();
-
-    // --------------------------------------------------
-    // Boot Runtime Debug
-    // --------------------------------------------------
-    // Do not call nonexistent tasks_connection_lost()
-    // or tasks_data_received() here. Current project
-    // keeps those states private inside tasks.cpp.
 
     debug_runtime(
         "[DBG][RUNTIME] %lu ms | BOOT COMPLETE | "
@@ -705,8 +562,7 @@ void setup(void)
 // Trace State
 // ==================================================
 
-static uint32_t trace_timer =
-    0;
+static uint32_t trace_timer = 0;
 
 // ==================================================
 // Main Loop
@@ -714,28 +570,20 @@ static uint32_t trace_timer =
 
 void loop(void)
 {
-    uint32_t loop_start =
-        micros();
+    uint32_t loop_start = micros();
 
-    uint32_t now =
-        millis();
+    uint32_t now = millis();
 
     bool trace =
-        (
-            now - trace_timer >=
-            TRACE_INTERVAL_MS
-        );
+        (now - trace_timer >= TRACE_INTERVAL_MS);
 
     if (trace)
     {
-        trace_timer =
-            now;
+        trace_timer = now;
 
         Serial.println();
 
-        Serial.println(
-            "[TRACE][LOOP] ===== HEARTBEAT ====="
-        );
+        Serial.println("[TRACE][LOOP] ===== HEARTBEAT =====");
 
         Serial.printf(
             "[TRACE][LOOP] "
@@ -756,19 +604,13 @@ void loop(void)
 
             (unsigned long)debug_last_phase,
 
-            phase_name(
-                debug_last_phase
-            )
+            phase_name(debug_last_phase)
         );
     }
 
-    // ==================================================
-    // PHASE 1
-    // Before tasks_run()
-    // ==================================================
+    // PHASE 1: before tasks_run()
 
-    debug_last_phase =
-        PHASE_BEFORE_TASKS;
+    debug_last_phase = PHASE_BEFORE_TASKS;
 
     watchdog_feed();
 
@@ -777,76 +619,46 @@ void loop(void)
 
     tasks_run();
 
-    // ==================================================
-    // PHASE 2
-    // After tasks_run()
-    // ==================================================
+    // PHASE 2: after tasks_run()
 
-    debug_last_phase =
-        PHASE_AFTER_TASKS;
+    debug_last_phase = PHASE_AFTER_TASKS;
 
     watchdog_feed();
 
-    // ==================================================
-    // PHASE 3
-    // Before lv_timer_handler()
-    // ==================================================
+    // PHASE 3: before lv_timer_handler()
 
-    debug_last_phase =
-        PHASE_BEFORE_LVGL;
+    debug_last_phase = PHASE_BEFORE_LVGL;
 
     lv_timer_handler();
 
-    // ==================================================
-    // PHASE 4
-    // After lv_timer_handler()
-    // ==================================================
+    // PHASE 4: after lv_timer_handler()
 
-    debug_last_phase =
-        PHASE_AFTER_LVGL;
+    debug_last_phase = PHASE_AFTER_LVGL;
 
     watchdog_feed();
 
-    // ==================================================
     // Loop timing
-    // ==================================================
 
-    uint32_t loop_dt =
-        micros() -
-        loop_start;
+    uint32_t loop_dt = micros() - loop_start;
 
-    static uint32_t max_loop_us =
-        0;
+    static uint32_t max_loop_us = 0;
 
-    if (
-        loop_dt >
-        max_loop_us
-    )
+    if (loop_dt > max_loop_us)
     {
-        max_loop_us =
-            loop_dt;
+        max_loop_us = loop_dt;
     }
 
-    if (
-        loop_dt >
-        200000UL
-    )
+    if (loop_dt > 200000UL)
     {
         Serial.printf(
-            "[DBG][LOOP] LONG LOOP "
-            "dt=%lu us\n",
-
+            "[DBG][LOOP] LONG LOOP dt=%lu us\n",
             (unsigned long)loop_dt
         );
     }
 
-    // ==================================================
-    // PHASE 5
-    // Complete loop
-    // ==================================================
+    // PHASE 5: loop complete
 
-    debug_last_phase =
-        PHASE_LOOP_COMPLETE;
+    debug_last_phase = PHASE_LOOP_COMPLETE;
 
     if (trace)
     {
@@ -859,9 +671,7 @@ void loop(void)
             (unsigned long)loop_dt
         );
 
-        Serial.println(
-            "[TRACE][LOOP] ===== END HEARTBEAT ====="
-        );
+        Serial.println("[TRACE][LOOP] ===== END HEARTBEAT =====");
     }
 
     yield();
