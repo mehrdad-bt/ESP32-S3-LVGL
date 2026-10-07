@@ -50,6 +50,9 @@ static const char *screen_name(
         case SCREEN_ID_V_C_RANGE_SETTINGS:
             return "V_C_RANGE";
 
+        case SCREEN_ID_UPDATE_PAGE:
+            return "UPDATE";
+
         default:
             return "UNKNOWN";
     }
@@ -76,6 +79,9 @@ static lv_obj_t *get_screen_object(
 
         case SCREEN_ID_V_C_RANGE_SETTINGS:
             return objects.v_c_range_settings;
+            
+        case SCREEN_ID_UPDATE_PAGE:
+            return objects.update_page;
 
         default:
             return NULL;

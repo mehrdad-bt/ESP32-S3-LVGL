@@ -68,10 +68,14 @@ typedef struct _objects_t {
     lv_obj_t *exit_from_v_c_menu_text;
     lv_obj_t *update_exit_button;
     lv_obj_t *update_exit_text;
-    lv_obj_t *update_button;
-    lv_obj_t *update_button_text;
     lv_obj_t *update_page_title;
-    lv_obj_t *update_status_text;
+    lv_obj_t *up_button;
+    lv_obj_t *up_button_text;
+    lv_obj_t *down_button;
+    lv_obj_t *down_button_text;
+    lv_obj_t *select_button;
+    lv_obj_t *select_button_text;
+    lv_obj_t *list_window;
 } objects_t;
 
 extern objects_t objects;

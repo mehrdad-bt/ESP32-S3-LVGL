@@ -6,6 +6,7 @@
 #include "screen_manager.h"
 #include "touchCalibration.h"
 #include "tasks.h"
+#include "UpdatePage.h"
 
 // ==================================================
 // MAIN -> SETTINGS
@@ -194,3 +195,26 @@ void action_current_max_changed(lv_event_t *e)
     );
 }
 
+
+
+void action_go_to_update_page(lv_event_t *e)
+{
+    (void)e;
+    update_page_enter();
+    screen_manager_show(SCREEN_ID_UPDATE_PAGE);
+}
+
+void action_exit_from_update_page(lv_event_t *e)
+{
+    (void)e;
+    screen_manager_show(SCREEN_ID_SETTINGS_PAGE);
+}
+
+void action_update_menu_up(lv_event_t *e)     { (void)e; update_page_up(); }
+void action_update_menu_down(lv_event_t *e)   { (void)e; update_page_down(); }
+void action_update_menu_select(lv_event_t *e) { (void)e; update_page_select(); }
+
+void action_hide_voltage_and_current_parameters_main_screen(lv_event_t *e)
+{
+    (void)e;
+}
