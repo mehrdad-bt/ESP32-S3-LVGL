@@ -702,7 +702,7 @@ void create_screen_update_page() {
                     // down_button_text
                     lv_obj_t *obj = lv_label_create(parent_obj);
                     objects.down_button_text = obj;
-                    lv_obj_set_pos(obj, 1, 2);
+                    lv_obj_set_pos(obj, 0, 0);
                     lv_obj_set_size(obj, LV_SIZE_CONTENT, LV_SIZE_CONTENT);
                     lv_obj_set_style_align(obj, LV_ALIGN_CENTER, LV_PART_MAIN | LV_STATE_DEFAULT);
                     lv_label_set_text_static(obj, "down");
@@ -722,7 +722,7 @@ void create_screen_update_page() {
                     // select_button_text
                     lv_obj_t *obj = lv_label_create(parent_obj);
                     objects.select_button_text = obj;
-                    lv_obj_set_pos(obj, 0, 2);
+                    lv_obj_set_pos(obj, 0, 0);
                     lv_obj_set_size(obj, LV_SIZE_CONTENT, LV_SIZE_CONTENT);
                     lv_obj_set_style_align(obj, LV_ALIGN_CENTER, LV_PART_MAIN | LV_STATE_DEFAULT);
                     lv_label_set_text_static(obj, "select");
