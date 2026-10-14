@@ -21,6 +21,7 @@ extern "C"
 #include "SettingsPage.h"
 #include "BuzzerPage.h"
 #include "VCRangePage.h"
+#include "ota_uart.h"
 
 // ==================================================
 // Configuration
@@ -399,6 +400,7 @@ static void lvgl_touch_init(void)
 
 static void debug_uart_rx(void)
 {
+    if (ota_uart_is_active()) { return; }
     static uint32_t last_debug_time = 0;
 
     uint32_t now =
@@ -459,6 +461,8 @@ static void debug_uart_rx(void)
 
 void setup(void)
 {
+    Serial1.setRxBufferSize(2048);
+    
     Serial.begin(
         115200
     );

@@ -125,17 +125,17 @@ static void configure_buzzer_labels(void)
 
 static void buzzer_dropdown_find(void)
 {
-    if (objects.buzzer_settings == NULL)
-    {
-        buzzer_dropdown = NULL;
-        return;
-    }
+    // ==================================================
+    // IMPORTANT:
+    // The dropdown now has its own named object:
+    //
+    // objects.buzzer_drop_down_menu
+    //
+    // No more obj0.
+    // ==================================================
 
     buzzer_dropdown =
-        lv_obj_get_child(
-            objects.buzzer_settings,
-            0
-        );
+        objects.buzzer_drop_down_menu;
 }
 
 // ==================================================
@@ -148,10 +148,12 @@ void buzzer_set_mode(
 {
     if (mode > BUZZER_MODE_3)
     {
-        mode = BUZZER_MODE_3;
+        mode =
+            BUZZER_MODE_3;
     }
 
-    buzzer_mode = mode;
+    buzzer_mode =
+        mode;
 }
 
 uint8_t buzzer_get_mode(void)
@@ -177,7 +179,9 @@ static void clear_buzzer_focus(void)
         );
     }
 
-    if (objects.buzzer_settings_page_back_button != NULL)
+    if (
+        objects.buzzer_settings_page_back_button != NULL
+    )
     {
         lv_obj_set_style_border_width(
             objects.buzzer_settings_page_back_button,
@@ -200,6 +204,7 @@ static void apply_buzzer_focus(void)
     }
 
     clear_buzzer_focus();
+
     buzzer_dropdown_find();
 
     if (!buzzer_focus_back)
@@ -223,7 +228,9 @@ static void apply_buzzer_focus(void)
     }
     else
     {
-        if (objects.buzzer_settings_page_back_button != NULL)
+        if (
+            objects.buzzer_settings_page_back_button != NULL
+        )
         {
             lv_obj_set_style_border_width(
                 objects.buzzer_settings_page_back_button,
@@ -305,10 +312,23 @@ static void buzzer_dropdown_change(
 
 void buzzer_page_init(void)
 {
-    buzzer_mode = BUZZER_MODE_1;
-    buzzer_focus_back = false;
-    buzzer_dropdown_open = false;
-    page_was_active = false;
+    buzzer_mode =
+        BUZZER_MODE_1;
+
+    buzzer_focus_back =
+        false;
+
+    buzzer_dropdown_open =
+        false;
+
+    page_was_active =
+        false;
+
+    // --------------------------------------------------
+    // Find the named dropdown object
+    // --------------------------------------------------
+
+    buzzer_dropdown_find();
 
     if (buzzer_dropdown != NULL)
     {
@@ -327,35 +347,62 @@ void buzzer_page_update(void)
 {
     if (!screen_manager_is(SCREEN_ID_BUZZER_SETTINGS))
     {
-        page_was_active = false;
+        page_was_active =
+            false;
+
         return;
     }
+
+    // --------------------------------------------------
+    // Find Dropdown
+    // --------------------------------------------------
 
     if (buzzer_dropdown == NULL)
     {
         buzzer_dropdown_find();
     }
 
+    // --------------------------------------------------
+    // First activation of page
+    // --------------------------------------------------
+
     if (!page_was_active)
     {
         configure_buzzer_labels();
 
-        buzzer_focus_back = false;
-        buzzer_dropdown_open = false;
+        buzzer_focus_back =
+            false;
+
+        buzzer_dropdown_open =
+            false;
+
+        buzzer_dropdown_find();
 
         if (buzzer_dropdown != NULL)
         {
-            lv_dropdown_close(buzzer_dropdown);
+            lv_dropdown_close(
+                buzzer_dropdown
+            );
         }
 
         apply_buzzer_focus();
-        page_was_active = true;
+
+        page_was_active =
+            true;
     }
+
+    // --------------------------------------------------
+    // No Dropdown
+    // --------------------------------------------------
 
     if (buzzer_dropdown == NULL)
     {
         return;
     }
+
+    // --------------------------------------------------
+    // Synchronize selected mode
+    // --------------------------------------------------
 
     if (!buzzer_dropdown_open)
     {
@@ -385,19 +432,32 @@ void buzzer_page_handle_right(void)
         return;
     }
 
+    // --------------------------------------------------
+    // Dropdown is open
+    // --------------------------------------------------
+
     if (buzzer_dropdown_open)
     {
-        buzzer_dropdown_change(1);
+        buzzer_dropdown_change(
+            1
+        );
+
         return;
     }
 
+    // --------------------------------------------------
+    // Toggle focus
+    // --------------------------------------------------
+
     if (!buzzer_focus_back)
     {
-        buzzer_focus_back = true;
+        buzzer_focus_back =
+            true;
     }
     else
     {
-        buzzer_focus_back = false;
+        buzzer_focus_back =
+            false;
     }
 
     apply_buzzer_focus();
@@ -416,6 +476,10 @@ void buzzer_page_handle_select(void)
 
     buzzer_dropdown_find();
 
+    // --------------------------------------------------
+    // Dropdown focus
+    // --------------------------------------------------
+
     if (!buzzer_focus_back)
     {
         if (buzzer_dropdown == NULL)
@@ -423,9 +487,14 @@ void buzzer_page_handle_select(void)
             return;
         }
 
+        // --------------------------------------------------
+        // Open dropdown
+        // --------------------------------------------------
+
         if (!buzzer_dropdown_open)
         {
-            buzzer_dropdown_open = true;
+            buzzer_dropdown_open =
+                true;
 
             lv_dropdown_open(
                 buzzer_dropdown
@@ -433,9 +502,15 @@ void buzzer_page_handle_select(void)
 
             apply_buzzer_focus();
         }
+
+        // --------------------------------------------------
+        // Close and save selected mode
+        // --------------------------------------------------
+
         else
         {
-            buzzer_dropdown_open = false;
+            buzzer_dropdown_open =
+                false;
 
             lv_dropdown_close(
                 buzzer_dropdown
@@ -460,6 +535,10 @@ void buzzer_page_handle_select(void)
         return;
     }
 
+    // --------------------------------------------------
+    // Back
+    // --------------------------------------------------
+
     action_go_from_buzzer_settings_page_to_settings_page(
         NULL
     );
@@ -468,8 +547,12 @@ void buzzer_page_handle_select(void)
 // ==================================================
 // Runtime Buzzer Task
 // ==================================================
-// The current project runs the buzzer runtime from tasks.cpp.
+//
+// The current project runs the buzzer runtime from
+// tasks.cpp.
+//
 // This function is kept as a compatibility entry point.
+//
 // ==================================================
 
 void buzzer_page_runtime_task(
